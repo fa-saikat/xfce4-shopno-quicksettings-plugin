@@ -29,6 +29,7 @@ libxfce4ui = dependency('libxfce4ui-2', version: '>= 4.18.0')
 libxfce4util = dependency('libxfce4util-1.0', version: '>= 4.18.0')
 libxfconf = dependency('libxfconf-0', version: '>= 4.18.0')
 libpulse = dependency('libpulse', version: '>= 15.0')
+libnm = dependency('libnm', version: '>= 1.24')
 libpulse_glib = dependency('libpulse-mainloop-glib', version: '>= 15.0')
 
 conf = configuration_data()
