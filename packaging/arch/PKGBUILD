@@ -1,0 +1,37 @@
+# Maintainer: FA Saikat <fahimabrar.saikat@gmail.com>
+
+pkgname=xfce4-shopno-quicksettings-plugin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Windows 11 style quick settings for the Xfce panel'
+arch=('x86_64' 'aarch64')
+url='https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin'
+license=('GPL-2.0-or-later')
+depends=('glib2' 'gtk3' 'libnm' 'libpulse' 'libx11' 'libxfce4ui' 'libxfce4util' 'libxrandr'
+         'xfce4-panel' 'xfconf')
+makedepends=('gettext' 'meson')
+optdepends=('networkmanager: Wi-Fi tile and network icon'
+            'bluez: Bluetooth tile'
+            'pipewire-pulse: volume, or pulseaudio'
+            'upower: battery level'
+            'xfce4-notifyd: Focus assist'
+            'blueman: More Bluetooth settings'
+            'nm-connection-editor: More Wi-Fi settings and enterprise networks'
+            'pavucontrol: More volume settings'
+            'xfce4-power-manager: power settings from the battery button'
+            'picom: background blur')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+# Built in CI from the checked-out tree; run updpkgsums before building
+# from the release tarball
+sha256sums=('SKIP')
+
+build() {
+  arch-meson "$pkgname-$pkgver" build -Dpreview=false
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dm644 "$pkgname-$pkgver/extras/picom/shopno-quicksettings.conf" \
+    "$pkgdir/usr/share/doc/$pkgname/picom-shopno-quicksettings.conf"
+}

@@ -1,0 +1,68 @@
+Name:           xfce4-shopno-quicksettings-plugin
+Version:        0.1.0
+Release:        1%{?dist}
+Summary:        Windows 11 style quick settings for the Xfce panel
+
+License:        GPL-2.0-or-later
+URL:            https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin
+Source0:        %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
+
+BuildRequires:  gcc
+BuildRequires:  gettext
+BuildRequires:  meson
+BuildRequires:  pkgconfig(gio-unix-2.0)
+BuildRequires:  pkgconfig(glib-2.0)
+BuildRequires:  pkgconfig(gtk+-3.0)
+BuildRequires:  pkgconfig(libnm)
+BuildRequires:  pkgconfig(libpulse)
+BuildRequires:  pkgconfig(libpulse-mainloop-glib)
+BuildRequires:  pkgconfig(libxfce4panel-2.0)
+BuildRequires:  pkgconfig(libxfce4ui-2)
+BuildRequires:  pkgconfig(libxfce4util-1.0)
+BuildRequires:  pkgconfig(libxfconf-0)
+BuildRequires:  pkgconfig(x11)
+BuildRequires:  pkgconfig(xrandr)
+
+Requires:       xfce4-panel
+Recommends:     NetworkManager
+Recommends:     bluez
+Recommends:     upower
+Recommends:     xfce4-notifyd
+Suggests:       blueman
+Suggests:       nm-connection-editor
+Suggests:       pavucontrol
+Suggests:       picom
+Suggests:       xfce4-power-manager
+
+%description
+Shopno Quick Settings is a panel plugin for Xfce modelled on the Windows 11
+quick settings flyout.
+
+It has tiles for Wi-Fi, Bluetooth, Focus assist and Night light, sliders for
+screen brightness and volume, the battery level, and network, volume and
+battery icons on the panel button. It talks to NetworkManager, BlueZ,
+PulseAudio or PipeWire, UPower and logind directly, and follows the GTK and
+icon theme.
+
+%prep
+%autosetup
+
+%build
+%meson -Dpreview=false
+%meson_build
+
+%install
+%meson_install
+# Add %%find_lang and "%%files -f %%{name}.lang" once po/LINGUAS lists a
+# language. Until then rpm rejects the empty list.
+
+%files
+%license COPYING
+%doc README.md extras/picom/shopno-quicksettings.conf
+%{_libdir}/xfce4/panel/plugins/libshopno-quicksettings.so
+%{_datadir}/xfce4/panel/plugins/shopno-quicksettings.desktop
+%{_datadir}/icons/hicolor/scalable/apps/shopno-quicksettings.svg
+
+%changelog
+* Sun Nov 01 2026 FA Saikat <fahimabrar.saikat@gmail.com> - 0.1.0-1
+- Initial release

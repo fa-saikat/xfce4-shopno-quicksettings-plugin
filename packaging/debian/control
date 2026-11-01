@@ -1,0 +1,54 @@
+Source: xfce4-shopno-quicksettings-plugin
+Section: xfce
+Priority: optional
+Maintainer: FA Saikat <fahimabrar.saikat@gmail.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ gettext,
+ libglib2.0-dev,
+ libgtk-3-dev,
+ libnm-dev,
+ libpulse-dev,
+ libx11-dev,
+ libxfce4panel-2.0-dev,
+ libxfce4ui-2-dev,
+ libxfce4util-dev,
+ libxfconf-0-dev,
+ libxrandr-dev,
+ meson,
+ ninja-build,
+ pkgconf,
+Standards-Version: 4.7.0
+Homepage: https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin
+Vcs-Browser: https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin
+Vcs-Git: https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin.git
+Rules-Requires-Root: no
+
+Package: xfce4-shopno-quicksettings-plugin
+Architecture: any
+Depends:
+ xfce4-panel,
+ ${misc:Depends},
+ ${shlibs:Depends},
+Recommends:
+ bluez,
+ network-manager,
+ pipewire-pulse | pulseaudio,
+ systemd,
+ upower,
+ xfce4-notifyd,
+Suggests:
+ blueman,
+ network-manager-gnome,
+ pavucontrol,
+ picom,
+ xfce4-power-manager,
+Description: Windows 11 style quick settings for the Xfce panel
+ Shopno Quick Settings is a panel plugin for Xfce modelled on the Windows 11
+ quick settings flyout.
+ .
+ It has tiles for Wi-Fi, Bluetooth, Focus assist and Night light, sliders
+ for screen brightness and volume, the battery level, and network, volume
+ and battery icons on the panel button. It talks to NetworkManager, BlueZ,
+ PulseAudio or PipeWire, UPower and logind directly, and follows the GTK
+ and icon theme.
