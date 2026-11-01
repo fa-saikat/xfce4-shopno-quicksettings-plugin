@@ -28,5 +28,6 @@ shopno_qs_features_attach (ShopnoQsWindow *window)
   shopno_qs_night_light_attach (window);
 
   /* Sliders */
+  shopno_qs_brightness_attach (window);
   shopno_qs_volume_attach (window);
 }
