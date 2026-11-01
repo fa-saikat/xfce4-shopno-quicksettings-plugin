@@ -337,6 +337,10 @@ shopno_qs_window_map_event (GtkWidget   *widget,
 {
   ShopnoQsWindow *self = SHOPNO_QS_WINDOW (widget);
 
+  /* xfwm4 maps a window again where it last was, ignoring a move made
+   * while it was hidden, so place it again now that it is shown */
+  shopno_qs_window_place (self, gtk_widget_get_allocated_height (widget));
+
   if (self->grab_input)
     {
       self->grab_retries = 0;
