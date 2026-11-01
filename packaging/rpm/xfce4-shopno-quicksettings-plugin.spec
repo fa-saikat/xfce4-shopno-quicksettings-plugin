@@ -66,3 +66,13 @@ icon theme.
 %changelog
 * Sun Nov 01 2026 FA Saikat <fahimabrar.saikat@gmail.com> - 0.1.0-1
 - Initial release
+- Wi-Fi tile and network page: switch the radio, connect with a password,
+  disconnect
+- Bluetooth tile and device page: switch the adapter, lifting an rfkill
+  block, and connect or disconnect paired devices
+- Focus assist (Do Not Disturb of xfce4-notifyd) and Night light tiles
+- Brightness slider for laptop screens, through logind
+- Volume slider with mute and an output device page
+- Battery level and a settings button in the footer
+- Network, volume and battery icons on the panel button; scroll for volume
+- Properties: tiles to show, Night light temperature, background blur
