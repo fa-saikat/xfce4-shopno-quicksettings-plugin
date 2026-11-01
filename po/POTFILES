@@ -1,5 +1,6 @@
 data/shopno-quicksettings.desktop.in
 src/shopno-qs-bluetooth-ui.c
+src/shopno-qs-focus.c
 src/shopno-qs-plugin.c
 src/shopno-qs-volume.c
 src/shopno-qs-wifi.c
