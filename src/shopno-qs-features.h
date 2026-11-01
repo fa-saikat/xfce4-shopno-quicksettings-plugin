@@ -19,6 +19,12 @@
 
 G_BEGIN_DECLS
 
+/* Tile ids, stored in the hidden-tiles setting */
+#define SHOPNO_QS_TILE_WIFI         "wifi"
+#define SHOPNO_QS_TILE_BLUETOOTH    "bluetooth"
+#define SHOPNO_QS_TILE_FOCUS        "focus-assist"
+#define SHOPNO_QS_TILE_NIGHT_LIGHT  "night-light"
+
 /* Each feature adds its tiles, sliders, pages and footer items to the
  * window, and lives as long as the window */
 void shopno_qs_wifi_attach      (ShopnoQsWindow *window);

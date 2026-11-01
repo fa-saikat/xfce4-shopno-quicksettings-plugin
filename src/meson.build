@@ -29,6 +29,7 @@ shopno_qs_core = static_library(
     'shopno-qs-bluetooth.c',
     'shopno-qs-bluetooth-ui.c',
     'shopno-qs-brightness.c',
+    'shopno-qs-dialog.c',
     'shopno-qs-features.c',
     'shopno-qs-focus.c',
     'shopno-qs-footer.c',

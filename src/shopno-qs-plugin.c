@@ -19,9 +19,14 @@
 #include <libxfce4util/libxfce4util.h>
 #include <xfconf/xfconf.h>
 
+#include "shopno-qs-dialog.h"
 #include "shopno-qs-settings.h"
 #include "shopno-qs-status.h"
 #include "shopno-qs-window.h"
+
+/* Tile ids contain no ';', so the list is stored as one string. Xfconf
+ * cannot store empty arrays, and an empty list must persist. */
+#define LIST_SEPARATOR ";"
 
 /* Space between the flyout and the panel or the edges of the screen */
 #define POPUP_GAP 12
@@ -57,15 +62,66 @@ XFCE_PANEL_DEFINE_PLUGIN_RESIDENT (ShopnoQsPlugin, shopno_qs_plugin)
  * Settings storage
  */
 
+static gchar *
+shopno_qs_plugin_property_path (ShopnoQsPlugin *self,
+                                const gchar    *name)
+{
+  return g_strconcat (xfce_panel_plugin_get_property_base (XFCE_PANEL_PLUGIN (self)), "/", name, NULL);
+}
+
+
+
 static void
 shopno_qs_plugin_bind (ShopnoQsPlugin *self,
                        const gchar    *name,
                        GType           type)
 {
-  gchar *path = g_strconcat (xfce_panel_plugin_get_property_base (XFCE_PANEL_PLUGIN (self)),
-                             "/", name, NULL);
+  gchar *path = shopno_qs_plugin_property_path (self, name);
 
   xfconf_g_property_bind (self->channel, path, type, self->settings, name);
+  g_free (path);
+}
+
+
+
+static void
+shopno_qs_plugin_load_list (ShopnoQsPlugin *self,
+                            const gchar    *name)
+{
+  gchar  *path = shopno_qs_plugin_property_path (self, name);
+  gchar  *value;
+  gchar **list;
+
+  if (xfconf_channel_has_property (self->channel, path))
+    {
+      value = xfconf_channel_get_string (self->channel, path, "");
+      list = *value != '\0' ? g_strsplit (value, LIST_SEPARATOR, -1) : g_new0 (gchar *, 1);
+      g_object_set (self->settings, name, list, NULL);
+      g_strfreev (list);
+      g_free (value);
+    }
+
+  g_free (path);
+}
+
+
+
+static void
+shopno_qs_plugin_save_list (ShopnoQsSettings *settings,
+                            GParamSpec       *pspec,
+                            ShopnoQsPlugin   *self)
+{
+  const gchar *name = g_param_spec_get_name (pspec);
+  gchar       *path = shopno_qs_plugin_property_path (self, name);
+  gchar      **list;
+  gchar       *value;
+
+  g_object_get (settings, name, &list, NULL);
+  value = g_strjoinv (LIST_SEPARATOR, list);
+  xfconf_channel_set_string (self->channel, path, value);
+
+  g_free (value);
+  g_strfreev (list);
   g_free (path);
 }
 
@@ -88,6 +144,10 @@ shopno_qs_plugin_load_settings (ShopnoQsPlugin *self)
   shopno_qs_plugin_bind (self, "enable-blur", G_TYPE_BOOLEAN);
   shopno_qs_plugin_bind (self, "night-light", G_TYPE_BOOLEAN);
   shopno_qs_plugin_bind (self, "night-light-temperature", G_TYPE_UINT);
+
+  shopno_qs_plugin_load_list (self, "hidden-tiles");
+  g_signal_connect (self->settings, "notify::hidden-tiles",
+                    G_CALLBACK (shopno_qs_plugin_save_list), self);
 }
 
 
@@ -281,6 +341,7 @@ shopno_qs_plugin_construct (XfcePanelPlugin *plugin)
 
   xfce_textdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR, "UTF-8");
 
+  xfce_panel_plugin_menu_show_configure (plugin);
   xfce_panel_plugin_menu_show_about (plugin);
 
   shopno_qs_plugin_load_settings (self);
@@ -303,6 +364,7 @@ shopno_qs_plugin_free_data (XfcePanelPlugin *plugin)
   if (self->window != NULL)
     gtk_widget_destroy (self->window);
 
+  g_signal_handlers_disconnect_by_data (self->settings, self);
   if (self->channel != NULL)
     {
       xfconf_g_property_unbind_all (self->settings);
@@ -337,6 +399,21 @@ shopno_qs_plugin_size_changed (XfcePanelPlugin *plugin,
 
 
 static void
+shopno_qs_plugin_configure_plugin (XfcePanelPlugin *plugin)
+{
+  GtkWidget *dialog;
+
+  dialog = shopno_qs_dialog_new (GTK_WINDOW (gtk_widget_get_toplevel (GTK_WIDGET (plugin))),
+                                 ((ShopnoQsPlugin *) plugin)->settings);
+
+  xfce_panel_plugin_block_menu (plugin);
+  g_signal_connect_swapped (dialog, "destroy", G_CALLBACK (xfce_panel_plugin_unblock_menu), plugin);
+  gtk_widget_show (dialog);
+}
+
+
+
+static void
 shopno_qs_plugin_about (XfcePanelPlugin *plugin)
 {
   const gchar *authors[] = { "FA Saikat <fahimabrar.saikat@gmail.com>", NULL };
@@ -362,6 +439,7 @@ shopno_qs_plugin_class_init (ShopnoQsPluginClass *klass)
   plugin_class->construct = shopno_qs_plugin_construct;
   plugin_class->free_data = shopno_qs_plugin_free_data;
   plugin_class->size_changed = shopno_qs_plugin_size_changed;
+  plugin_class->configure_plugin = shopno_qs_plugin_configure_plugin;
   plugin_class->about = shopno_qs_plugin_about;
 }
 

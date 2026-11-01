@@ -103,7 +103,7 @@ shopno_qs_night_light_attach (ShopnoQsWindow *window)
 
   night->tile = shopno_qs_tile_new ("night-light-symbolic", _("Night light"), FALSE);
   g_signal_connect_swapped (night->tile, "toggled", G_CALLBACK (night_light_toggled), night);
-  shopno_qs_window_add_tile (window, night->tile);
+  shopno_qs_window_add_tile (window, SHOPNO_QS_TILE_NIGHT_LIGHT, night->tile);
 
   if (!shopno_qs_gamma_supported (gdk_screen_get_display (night->screen)))
     {

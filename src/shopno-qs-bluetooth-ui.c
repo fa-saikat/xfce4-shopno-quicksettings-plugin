@@ -209,7 +209,7 @@ shopno_qs_bluetooth_attach (ShopnoQsWindow *window)
   bluetooth->tile = shopno_qs_tile_new ("bluetooth-active-symbolic", _("Bluetooth"), TRUE);
   g_signal_connect_swapped (bluetooth->tile, "toggled", G_CALLBACK (bluetooth_toggled), bluetooth);
   g_signal_connect_swapped (bluetooth->tile, "details", G_CALLBACK (bluetooth_details), bluetooth);
-  shopno_qs_window_add_tile (window, bluetooth->tile);
+  shopno_qs_window_add_tile (window, SHOPNO_QS_TILE_BLUETOOTH, bluetooth->tile);
 
   /* Device page: the adapter switch, then the paired devices */
   page = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);

@@ -550,7 +550,7 @@ shopno_qs_wifi_attach (ShopnoQsWindow *window)
   wifi->tile = shopno_qs_tile_new ("network-wireless-symbolic", _("Wi-Fi"), TRUE);
   g_signal_connect_swapped (wifi->tile, "toggled", G_CALLBACK (wifi_toggled), wifi);
   g_signal_connect_swapped (wifi->tile, "details", G_CALLBACK (wifi_details), wifi);
-  shopno_qs_window_add_tile (window, wifi->tile);
+  shopno_qs_window_add_tile (window, SHOPNO_QS_TILE_WIFI, wifi->tile);
 
   /* Network page: the radio switch, then the networks in range */
   page = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);

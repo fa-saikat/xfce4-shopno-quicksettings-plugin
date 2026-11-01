@@ -36,7 +36,9 @@ void       shopno_qs_window_set_grab_input (ShopnoQsWindow   *window,
 ShopnoQsSettings *shopno_qs_window_get_settings (ShopnoQsWindow *window);
 
 /* Content, filled in by the feature modules */
+/* The id names the tile in the hidden-tiles setting */
 void       shopno_qs_window_add_tile       (ShopnoQsWindow   *window,
+                                            const gchar      *id,
                                             GtkWidget        *tile);
 
 void       shopno_qs_window_add_slider     (ShopnoQsWindow   *window,
