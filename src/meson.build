@@ -12,14 +12,21 @@ shopno_qs_deps = [
   libxfce4ui,
   libxfce4util,
   libxfconf,
+  libpulse,
+  libpulse_glib,
 ]
 
 # Everything except the panel glue, shared with the preview tool
 shopno_qs_core = static_library(
   'shopno-qs-core',
   sources: [
+    'shopno-qs-audio.c',
+    'shopno-qs-features.c',
     'shopno-qs-settings.c',
+    'shopno-qs-slider.c',
     'shopno-qs-tile.c',
+    'shopno-qs-util.c',
+    'shopno-qs-volume.c',
     'shopno-qs-window.c',
     resources,
   ],
