@@ -15,6 +15,9 @@ shopno_qs_deps = [
   libpulse,
   libpulse_glib,
   libnm,
+  x11,
+  xrandr,
+  libm,
 ]
 
 # Everything except the panel glue, shared with the preview tool
@@ -26,7 +29,9 @@ shopno_qs_core = static_library(
     'shopno-qs-bluetooth-ui.c',
     'shopno-qs-features.c',
     'shopno-qs-focus.c',
+    'shopno-qs-gamma.c',
     'shopno-qs-network.c',
+    'shopno-qs-night-light.c',
     'shopno-qs-settings.c',
     'shopno-qs-slider.c',
     'shopno-qs-tile.c',

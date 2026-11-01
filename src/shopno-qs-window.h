@@ -33,6 +33,8 @@ void       shopno_qs_window_popup          (ShopnoQsWindow   *window,
 void       shopno_qs_window_set_grab_input (ShopnoQsWindow   *window,
                                             gboolean          grab_input);
 
+ShopnoQsSettings *shopno_qs_window_get_settings (ShopnoQsWindow *window);
+
 /* Content, filled in by the feature modules */
 void       shopno_qs_window_add_tile       (ShopnoQsWindow   *window,
                                             GtkWidget        *tile);

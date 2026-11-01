@@ -633,3 +633,13 @@ shopno_qs_window_show_main (ShopnoQsWindow *window)
   gtk_stack_set_visible_child_full (GTK_STACK (window->stack), "main",
                                     GTK_STACK_TRANSITION_TYPE_SLIDE_RIGHT);
 }
+
+
+
+ShopnoQsSettings *
+shopno_qs_window_get_settings (ShopnoQsWindow *window)
+{
+  g_return_val_if_fail (SHOPNO_IS_QS_WINDOW (window), NULL);
+
+  return window->settings;
+}

@@ -39,6 +39,7 @@ struct _ShopnoQsPlugin
 
   ShopnoQsSettings *settings;
   XfconfChannel    *channel;
+  guint             create_window_id;
 
   GtkWidget        *button;
   GtkWidget        *box;
@@ -84,6 +85,8 @@ shopno_qs_plugin_load_settings (ShopnoQsPlugin *self)
   self->channel = xfconf_channel_get ("xfce4-panel");
 
   shopno_qs_plugin_bind (self, "enable-blur", G_TYPE_BOOLEAN);
+  shopno_qs_plugin_bind (self, "night-light", G_TYPE_BOOLEAN);
+  shopno_qs_plugin_bind (self, "night-light-temperature", G_TYPE_UINT);
 }
 
 
@@ -104,12 +107,31 @@ shopno_qs_plugin_window_hidden (ShopnoQsPlugin *self)
 static void
 shopno_qs_plugin_create_window (ShopnoQsPlugin *self)
 {
+  if (self->create_window_id != 0)
+    {
+      g_source_remove (self->create_window_id);
+      self->create_window_id = 0;
+    }
+
   if (self->window != NULL)
     return;
 
   self->window = shopno_qs_window_new (self->settings);
   g_signal_connect_swapped (self->window, "hide",
                             G_CALLBACK (shopno_qs_plugin_window_hidden), self);
+}
+
+
+
+static gboolean
+shopno_qs_plugin_create_window_idle (gpointer data)
+{
+  ShopnoQsPlugin *self = data;
+
+  self->create_window_id = 0;
+  shopno_qs_plugin_create_window (self);
+
+  return G_SOURCE_REMOVE;
 }
 
 
@@ -228,6 +250,10 @@ shopno_qs_plugin_construct (XfcePanelPlugin *plugin)
   xfce_panel_plugin_menu_show_about (plugin);
 
   shopno_qs_plugin_load_settings (self);
+
+  /* Create the flyout before the first click: Night light must be
+   * applied at login, and the panel icons follow the same services */
+  self->create_window_id = g_idle_add (shopno_qs_plugin_create_window_idle, self);
 }
 
 
@@ -236,6 +262,9 @@ static void
 shopno_qs_plugin_free_data (XfcePanelPlugin *plugin)
 {
   ShopnoQsPlugin *self = (ShopnoQsPlugin *) plugin;
+
+  if (self->create_window_id != 0)
+    g_source_remove (self->create_window_id);
 
   if (self->window != NULL)
     gtk_widget_destroy (self->window);

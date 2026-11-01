@@ -24,6 +24,7 @@ G_BEGIN_DECLS
 void shopno_qs_wifi_attach      (ShopnoQsWindow *window);
 void shopno_qs_bluetooth_attach (ShopnoQsWindow *window);
 void shopno_qs_focus_attach     (ShopnoQsWindow *window);
+void shopno_qs_night_light_attach (ShopnoQsWindow *window);
 void shopno_qs_volume_attach    (ShopnoQsWindow *window);
 
 /* Adds every feature, in the order they appear on Windows 11 */
