@@ -37,6 +37,7 @@ shopno_qs_core = static_library(
     'shopno-qs-night-light.c',
     'shopno-qs-settings.c',
     'shopno-qs-slider.c',
+    'shopno-qs-status.c',
     'shopno-qs-tile.c',
     'shopno-qs-util.c',
     'shopno-qs-volume.c',
