@@ -16,6 +16,7 @@
 
 #include <glib/gi18n-lib.h>
 
+#include "shopno-qs-features.h"
 #include "shopno-qs-window.h"
 
 /* Width of the flyout at 100% scale, as on Windows 11 */
@@ -360,6 +361,8 @@ shopno_qs_window_constructed (GObject *object)
   g_signal_connect_swapped (self->settings, "notify::enable-blur",
                             G_CALLBACK (shopno_qs_window_update_blur), self);
   shopno_qs_window_update_blur (self);
+
+  shopno_qs_features_attach (self);
 }
 
 

@@ -195,3 +195,69 @@ window:not(.composited) .shopno-qs-footer {
   padding: 6px 12px;
   border-radius: 4px;
 }
+
+.shopno-qs-empty {
+  margin: 12px;
+  color: alpha(@theme_fg_color, 0.6);
+}
+
+/* Slider rows: a thin track with the accent fill and a round knob, like
+ * the Windows 11 sliders */
+
+.shopno-qs-slider {
+  min-height: 48px;
+}
+
+.shopno-qs-slider button {
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 4px;
+}
+
+.shopno-qs-slider scale {
+  padding: 12px 6px;
+}
+
+.shopno-qs-slider scale trough {
+  min-height: 4px;
+  border: none;
+  border-radius: 2px;
+  background-image: none;
+  background-color: alpha(@theme_fg_color, 0.35);
+  box-shadow: none;
+}
+
+.shopno-qs-slider scale highlight {
+  min-height: 4px;
+  border: none;
+  border-radius: 2px;
+  background-image: none;
+  background-color: @theme_selected_bg_color;
+}
+
+.shopno-qs-slider scale slider {
+  /* 30px with the border; the margin lets it overhang the 4px track */
+  min-width: 20px;
+  min-height: 20px;
+  margin: -13px;
+  border-radius: 50%;
+  border: 5px solid @theme_bg_color;
+  background-image: none;
+  background-color: @theme_selected_bg_color;
+  box-shadow: 0 0 0 1px alpha(@theme_fg_color, 0.15), 0 1px 2px alpha(black, 0.2);
+  transition: border-width 100ms ease-out;
+}
+
+.shopno-qs-slider scale slider:hover {
+  border-width: 4px;
+}
+
+.shopno-qs-slider scale slider:active {
+  border-width: 6px;
+}
+
+.shopno-qs-slider:disabled scale highlight,
+.shopno-qs-slider scale:disabled highlight {
+  background-color: alpha(@theme_fg_color, 0.35);
+}
