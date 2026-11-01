@@ -164,6 +164,13 @@ shopno_qs_slider_new (const gchar *icon_name,
   shopno_qs_slider_set_icon_name (slider, icon_name);
   gtk_widget_set_tooltip_text (slider->icon_button, icon_tooltip);
 
+  /* Without a tooltip the icon has no action, like the brightness icon */
+  if (icon_tooltip == NULL)
+    {
+      gtk_widget_set_can_focus (slider->icon_button, FALSE);
+      gtk_style_context_add_class (gtk_widget_get_style_context (slider->icon_button), "static");
+    }
+
   /* Without a chevron, keep the slider the same length as one with it */
   gtk_widget_set_visible (slider->details_button, TRUE);
   gtk_widget_set_opacity (slider->details_button, has_details ? 1.0 : 0.0);

@@ -215,6 +215,14 @@ window:not(.composited) .shopno-qs-footer {
   border-radius: 4px;
 }
 
+.shopno-qs-slider button.static,
+.shopno-qs-slider button.static:hover,
+.shopno-qs-slider button.static:active {
+  background: none;
+  box-shadow: none;
+  border-color: transparent;
+}
+
 .shopno-qs-slider scale {
   padding: 12px 6px;
 }
