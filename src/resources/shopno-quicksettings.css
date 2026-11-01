@@ -261,3 +261,32 @@ window:not(.composited) .shopno-qs-footer {
 .shopno-qs-slider scale:disabled highlight {
   background-color: alpha(@theme_fg_color, 0.35);
 }
+
+.shopno-qs-dim {
+  opacity: 0.6;
+}
+
+/* A switch at the top of a detail page, such as Wi-Fi on or off */
+.shopno-qs-page-switch {
+  padding: 4px 12px 12px 12px;
+}
+
+/* Actions revealed under a list row */
+.shopno-qs-row-actions {
+  padding: 10px 0 2px 28px;
+}
+
+.shopno-qs-row-actions button {
+  min-height: 30px;
+  padding: 0 16px;
+  border-radius: 4px;
+}
+
+.shopno-qs-row-actions entry {
+  min-height: 32px;
+  border-radius: 4px;
+}
+
+.shopno-qs-row-message {
+  font-size: 0.9em;
+}
