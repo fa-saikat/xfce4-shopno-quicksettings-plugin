@@ -1,0 +1,12 @@
+/*
+ * Shopno Quick Settings default style.
+ *
+ * Colors are taken from the active GTK theme, so the flyout follows light
+ * and dark themes automatically. Only geometry (spacing, radius) is fixed
+ * here. Users can override any rule from ~/.config/gtk-3.0/gtk.css.
+ */
+
+.shopno-qs-frame {
+  min-height: 200px;
+  background-color: @theme_bg_color;
+}

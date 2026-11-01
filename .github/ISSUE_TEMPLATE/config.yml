@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin/discussions
+    about: Ask how to install, set up, or use Shopno Quick Settings.
+  - name: Building and installing
+    url: https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin#building
+    about: Build steps for each distribution, and how to set up blur.

@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest a new feature or an improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Shopno Quick Settings aims to match the Windows 11 quick settings flyout.
+        Features beyond that are welcome when they fit the same simple design.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [existing issues](https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin/issues?q=is%3Aissue) and this has not been requested.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe what you are trying to do, not only the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work? Mockups and screenshots are welcome.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: How does this relate to Windows 11?
+      options:
+        - Windows 11 does this and Shopno Quick Settings does not
+        - It goes beyond Windows 11
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered
