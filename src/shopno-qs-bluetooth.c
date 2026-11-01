@@ -249,6 +249,59 @@ shopno_qs_bluetooth_schedule_update (ShopnoQsBluetooth *self)
 
 
 
+/* While a program scans, BlueZ updates RSSI, TX power and manufacturer
+ * data of every nearby device, often every second. Only the properties
+ * the flyout shows are worth an update. */
+static gboolean
+shopno_qs_bluetooth_is_relevant (const gchar *interface,
+                                 const gchar *property)
+{
+  static const gchar * const adapter[] = { "Powered", "PowerState", NULL };
+  static const gchar * const device[] = { "Paired", "Connected", "Alias", "Icon", "Adapter", NULL };
+  static const gchar * const battery[] = { "Percentage", NULL };
+
+  if (g_strcmp0 (interface, ADAPTER_IFACE) == 0)
+    return g_strv_contains (adapter, property);
+  if (g_strcmp0 (interface, DEVICE_IFACE) == 0)
+    return g_strv_contains (device, property);
+  if (g_strcmp0 (interface, BATTERY_IFACE) == 0)
+    return g_strv_contains (battery, property);
+
+  return FALSE;
+}
+
+
+
+static void
+shopno_qs_bluetooth_properties_changed (GDBusObjectManagerClient *manager,
+                                        GDBusObjectProxy         *object,
+                                        GDBusProxy               *proxy,
+                                        GVariant                 *changed,
+                                        const gchar * const      *invalidated,
+                                        ShopnoQsBluetooth        *self)
+{
+  const gchar  *interface = g_dbus_proxy_get_interface_name (proxy);
+  GVariantIter  iter;
+  const gchar  *property;
+
+  g_variant_iter_init (&iter, changed);
+  while (g_variant_iter_next (&iter, "{&sv}", &property, NULL))
+    if (shopno_qs_bluetooth_is_relevant (interface, property))
+      {
+        shopno_qs_bluetooth_schedule_update (self);
+        return;
+      }
+
+  for (guint i = 0; invalidated != NULL && invalidated[i] != NULL; i++)
+    if (shopno_qs_bluetooth_is_relevant (interface, invalidated[i]))
+      {
+        shopno_qs_bluetooth_schedule_update (self);
+        return;
+      }
+}
+
+
+
 static void
 shopno_qs_bluetooth_manager_ready (GObject      *source,
                                    GAsyncResult *result,
@@ -281,8 +334,8 @@ shopno_qs_bluetooth_manager_ready (GObject      *source,
                             G_CALLBACK (shopno_qs_bluetooth_schedule_update), self);
   g_signal_connect_swapped (manager, "interface-removed",
                             G_CALLBACK (shopno_qs_bluetooth_schedule_update), self);
-  g_signal_connect_swapped (manager, "interface-proxy-properties-changed",
-                            G_CALLBACK (shopno_qs_bluetooth_schedule_update), self);
+  g_signal_connect (manager, "interface-proxy-properties-changed",
+                    G_CALLBACK (shopno_qs_bluetooth_properties_changed), self);
 
   shopno_qs_bluetooth_schedule_update (self);
 }
