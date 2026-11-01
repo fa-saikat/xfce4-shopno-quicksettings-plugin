@@ -36,6 +36,12 @@ void              shopno_qs_settings_set_night_light (ShopnoQsSettings *settings
                                                       gboolean          night_light);
 guint             shopno_qs_settings_get_night_light_temperature (ShopnoQsSettings *settings);
 
+gboolean          shopno_qs_settings_is_tile_hidden  (ShopnoQsSettings *settings,
+                                                      const gchar      *id);
+void              shopno_qs_settings_set_tile_hidden (ShopnoQsSettings *settings,
+                                                      const gchar      *id,
+                                                      gboolean          hidden);
+
 G_END_DECLS
 
 #endif /* !__SHOPNO_QS_SETTINGS_H__ */

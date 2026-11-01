@@ -160,7 +160,7 @@ shopno_qs_focus_attach (ShopnoQsWindow *window)
 
   focus->tile = shopno_qs_tile_new ("weather-clear-night-symbolic", _("Focus assist"), FALSE);
   g_signal_connect_swapped (focus->tile, "toggled", G_CALLBACK (focus_toggled), focus);
-  shopno_qs_window_add_tile (window, focus->tile);
+  shopno_qs_window_add_tile (window, SHOPNO_QS_TILE_FOCUS, focus->tile);
 
   focus_update (focus);
   focus_check_daemon (focus);

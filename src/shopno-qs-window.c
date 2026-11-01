@@ -26,6 +26,8 @@
 /* Detail pages scroll beyond this height */
 #define PAGE_MAX_HEIGHT 400
 
+#define TILE_ID_KEY "shopno-qs-tile-id"
+
 /* Window roles, matched by the picom rules shipped in extras/picom */
 #define ROLE_PLAIN "shopno-quicksettings"
 #define ROLE_BLUR  "shopno-quicksettings-blur"
@@ -158,6 +160,24 @@ shopno_qs_window_update_blur (ShopnoQsWindow *self)
     gtk_style_context_add_class (context, "blur");
   else
     gtk_style_context_remove_class (context, "blur");
+}
+
+
+
+/* Hidden tiles leave no gap: the flow box moves the others up */
+static void
+shopno_qs_window_update_hidden_tiles (ShopnoQsWindow *self)
+{
+  GList *children = gtk_container_get_children (GTK_CONTAINER (self->tiles));
+
+  for (GList *l = children; l != NULL; l = l->next)
+    {
+      const gchar *id = g_object_get_data (G_OBJECT (l->data), TILE_ID_KEY);
+
+      gtk_widget_set_visible (l->data, !shopno_qs_settings_is_tile_hidden (self->settings, id));
+    }
+
+  g_list_free (children);
 }
 
 
@@ -360,6 +380,8 @@ shopno_qs_window_constructed (GObject *object)
 
   g_signal_connect_swapped (self->settings, "notify::enable-blur",
                             G_CALLBACK (shopno_qs_window_update_blur), self);
+  g_signal_connect_swapped (self->settings, "notify::hidden-tiles",
+                            G_CALLBACK (shopno_qs_window_update_hidden_tiles), self);
   shopno_qs_window_update_blur (self);
 
   shopno_qs_features_attach (self);
@@ -523,20 +545,24 @@ shopno_qs_window_set_grab_input (ShopnoQsWindow *window,
 
 void
 shopno_qs_window_add_tile (ShopnoQsWindow *window,
+                           const gchar    *id,
                            GtkWidget      *tile)
 {
   GtkWidget *child;
 
   g_return_if_fail (SHOPNO_IS_QS_WINDOW (window));
+  g_return_if_fail (id != NULL);
 
   /* The flow box child only places the tile; the tile handles focus */
   child = gtk_flow_box_child_new ();
   gtk_widget_set_can_focus (child, FALSE);
+  g_object_set_data_full (G_OBJECT (child), TILE_ID_KEY, g_strdup (id), g_free);
   gtk_container_add (GTK_CONTAINER (child), tile);
+  gtk_widget_show (child);
+  gtk_widget_set_no_show_all (child, TRUE);
   gtk_container_add (GTK_CONTAINER (window->tiles), child);
 
-  /* Hiding the tile hides its cell, so the others move up */
-  g_object_bind_property (tile, "visible", child, "visible", G_BINDING_SYNC_CREATE);
+  shopno_qs_window_update_hidden_tiles (window);
 }
 
 
