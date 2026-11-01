@@ -22,6 +22,9 @@
 #define WINDOW_WIDTH 360
 #define TILE_COLUMNS 3
 
+/* Detail pages scroll beyond this height */
+#define PAGE_MAX_HEIGHT 400
+
 /* Window roles, matched by the picom rules shipped in extras/picom */
 #define ROLE_PLAIN "shopno-quicksettings"
 #define ROLE_BLUR  "shopno-quicksettings-blur"
@@ -291,8 +294,7 @@ shopno_qs_window_key_press_event (GtkWidget   *widget,
     {
       /* Step back to the main page first, then close */
       if (g_strcmp0 (gtk_stack_get_visible_child_name (GTK_STACK (self->stack)), "main") != 0)
-        gtk_stack_set_visible_child_full (GTK_STACK (self->stack), "main",
-                                          GTK_STACK_TRANSITION_TYPE_SLIDE_RIGHT);
+        shopno_qs_window_show_main (self);
       else
         gtk_widget_hide (widget);
 
@@ -454,6 +456,8 @@ shopno_qs_window_init (ShopnoQsWindow *self)
   gtk_flow_box_set_max_children_per_line (GTK_FLOW_BOX (self->tiles), TILE_COLUMNS);
   gtk_flow_box_set_selection_mode (GTK_FLOW_BOX (self->tiles), GTK_SELECTION_NONE);
   gtk_flow_box_set_activate_on_single_click (GTK_FLOW_BOX (self->tiles), FALSE);
+  gtk_flow_box_set_column_spacing (GTK_FLOW_BOX (self->tiles), 12);
+  gtk_flow_box_set_row_spacing (GTK_FLOW_BOX (self->tiles), 16);
   gtk_style_context_add_class (gtk_widget_get_style_context (self->tiles), "shopno-qs-tiles");
   gtk_box_pack_start (GTK_BOX (self->main_page), self->tiles, FALSE, FALSE, 0);
 
@@ -556,4 +560,73 @@ shopno_qs_window_add_footer (ShopnoQsWindow *window,
     gtk_box_pack_end (GTK_BOX (window->footer_end), widget, FALSE, FALSE, 0);
   else
     gtk_box_pack_start (GTK_BOX (window->footer_start), widget, FALSE, FALSE, 0);
+}
+
+
+
+void
+shopno_qs_window_add_page (ShopnoQsWindow *window,
+                           const gchar    *name,
+                           const gchar    *title,
+                           GtkWidget      *content)
+{
+  GtkWidget *page;
+  GtkWidget *header;
+  GtkWidget *button;
+  GtkWidget *label;
+  GtkWidget *scroll;
+
+  g_return_if_fail (SHOPNO_IS_QS_WINDOW (window));
+  g_return_if_fail (g_strcmp0 (name, "main") != 0);
+
+  page = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+  gtk_style_context_add_class (gtk_widget_get_style_context (page), "shopno-qs-page");
+
+  header = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_style_context_add_class (gtk_widget_get_style_context (header), "shopno-qs-page-header");
+  gtk_box_pack_start (GTK_BOX (page), header, FALSE, FALSE, 0);
+
+  button = gtk_button_new_from_icon_name ("pan-start-symbolic", GTK_ICON_SIZE_BUTTON);
+  gtk_button_set_relief (GTK_BUTTON (button), GTK_RELIEF_NONE);
+  gtk_widget_set_tooltip_text (button, _("Back"));
+  g_signal_connect_swapped (button, "clicked", G_CALLBACK (shopno_qs_window_show_main), window);
+  gtk_box_pack_start (GTK_BOX (header), button, FALSE, FALSE, 0);
+
+  label = gtk_label_new (title);
+  gtk_label_set_xalign (GTK_LABEL (label), 0.0);
+  gtk_style_context_add_class (gtk_widget_get_style_context (label), "shopno-qs-page-title");
+  gtk_box_pack_start (GTK_BOX (header), label, TRUE, TRUE, 0);
+
+  scroll = gtk_scrolled_window_new (NULL, NULL);
+  gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+  gtk_scrolled_window_set_propagate_natural_height (GTK_SCROLLED_WINDOW (scroll), TRUE);
+  gtk_scrolled_window_set_max_content_height (GTK_SCROLLED_WINDOW (scroll), PAGE_MAX_HEIGHT);
+  gtk_container_add (GTK_CONTAINER (scroll), content);
+  gtk_box_pack_start (GTK_BOX (page), scroll, TRUE, TRUE, 0);
+
+  gtk_widget_show_all (page);
+  gtk_stack_add_named (GTK_STACK (window->stack), page, name);
+}
+
+
+
+void
+shopno_qs_window_show_page (ShopnoQsWindow *window,
+                            const gchar    *name)
+{
+  g_return_if_fail (SHOPNO_IS_QS_WINDOW (window));
+
+  gtk_stack_set_visible_child_full (GTK_STACK (window->stack), name,
+                                    GTK_STACK_TRANSITION_TYPE_SLIDE_LEFT);
+}
+
+
+
+void
+shopno_qs_window_show_main (ShopnoQsWindow *window)
+{
+  g_return_if_fail (SHOPNO_IS_QS_WINDOW (window));
+
+  gtk_stack_set_visible_child_full (GTK_STACK (window->stack), "main",
+                                    GTK_STACK_TRANSITION_TYPE_SLIDE_RIGHT);
 }
