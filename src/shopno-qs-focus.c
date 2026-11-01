@@ -102,19 +102,28 @@ focus_server_info (GObject      *source,
   Focus       *focus;
 
   reply = g_dbus_connection_call_finish (G_DBUS_CONNECTION (source), result, &error);
-  if (reply == NULL)
+  if (reply == NULL && g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
     {
-      /* No daemon running yet: xfce4-notifyd is started on demand */
       g_error_free (error);
       return;
     }
 
   focus = data;
-  g_variant_get (reply, "(&s&s&s&s)", &name, NULL, NULL, NULL);
-  focus->other_daemon = g_strcmp0 (name, NOTIFYD_NAME) != 0;
-  focus_update (focus);
 
-  g_variant_unref (reply);
+  if (reply != NULL)
+    {
+      g_variant_get (reply, "(&s&s&s&s)", &name, NULL, NULL, NULL);
+      focus->other_daemon = g_strcmp0 (name, NOTIFYD_NAME) != 0;
+      g_variant_unref (reply);
+    }
+  else
+    {
+      /* No daemon running: xfce4-notifyd is started on demand */
+      focus->other_daemon = FALSE;
+      g_error_free (error);
+    }
+
+  focus_update (focus);
 }
 
 
@@ -161,6 +170,10 @@ shopno_qs_focus_attach (ShopnoQsWindow *window)
   focus->tile = shopno_qs_tile_new ("weather-clear-night-symbolic", _("Focus assist"), FALSE);
   g_signal_connect_swapped (focus->tile, "toggled", G_CALLBACK (focus_toggled), focus);
   shopno_qs_window_add_tile (window, SHOPNO_QS_TILE_FOCUS, focus->tile);
+
+  /* The daemon may change while the panel runs, so ask again each time
+   * the flyout opens */
+  g_signal_connect_swapped (window, "map", G_CALLBACK (focus_check_daemon), focus);
 
   focus_update (focus);
   focus_check_daemon (focus);
