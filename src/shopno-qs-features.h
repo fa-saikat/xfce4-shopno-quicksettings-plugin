@@ -21,8 +21,9 @@ G_BEGIN_DECLS
 
 /* Each feature adds its tiles, sliders, pages and footer items to the
  * window, and lives as long as the window */
-void shopno_qs_wifi_attach   (ShopnoQsWindow *window);
-void shopno_qs_volume_attach (ShopnoQsWindow *window);
+void shopno_qs_wifi_attach      (ShopnoQsWindow *window);
+void shopno_qs_bluetooth_attach (ShopnoQsWindow *window);
+void shopno_qs_volume_attach    (ShopnoQsWindow *window);
 
 /* Adds every feature, in the order they appear on Windows 11 */
 void shopno_qs_features_attach (ShopnoQsWindow *window);

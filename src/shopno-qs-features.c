@@ -23,6 +23,7 @@ shopno_qs_features_attach (ShopnoQsWindow *window)
 {
   /* Tiles */
   shopno_qs_wifi_attach (window);
+  shopno_qs_bluetooth_attach (window);
 
   /* Sliders */
   shopno_qs_volume_attach (window);
