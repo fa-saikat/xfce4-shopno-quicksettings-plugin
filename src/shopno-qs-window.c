@@ -499,7 +499,7 @@ shopno_qs_window_init (ShopnoQsWindow *self)
   gtk_flow_box_set_selection_mode (GTK_FLOW_BOX (self->tiles), GTK_SELECTION_NONE);
   gtk_flow_box_set_activate_on_single_click (GTK_FLOW_BOX (self->tiles), FALSE);
   gtk_flow_box_set_column_spacing (GTK_FLOW_BOX (self->tiles), 12);
-  gtk_flow_box_set_row_spacing (GTK_FLOW_BOX (self->tiles), 16);
+  gtk_flow_box_set_row_spacing (GTK_FLOW_BOX (self->tiles), 22);
   gtk_style_context_add_class (gtk_widget_get_style_context (self->tiles), "shopno-qs-tiles");
   gtk_box_pack_start (GTK_BOX (self->main_page), self->tiles, FALSE, FALSE, 0);
 
