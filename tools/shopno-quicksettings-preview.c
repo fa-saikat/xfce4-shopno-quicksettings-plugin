@@ -22,15 +22,18 @@
 
 #include <gtk/gtk.h>
 
+#include "shopno-qs-status.h"
 #include "shopno-qs-window.h"
 
 static gboolean opt_blur = FALSE;
 static gboolean opt_no_grab = FALSE;
+static gboolean opt_status = FALSE;
 
 static const GOptionEntry entries[] =
 {
   { "blur", 0, 0, G_OPTION_ARG_NONE, &opt_blur, "Use the blur style", NULL },
   { "no-grab", 0, 0, G_OPTION_ARG_NONE, &opt_no_grab, "Do not grab the keyboard and pointer", NULL },
+  { "status", 0, 0, G_OPTION_ARG_NONE, &opt_status, "Also show the panel button's status icons", NULL },
   { NULL }
 };
 
@@ -57,6 +60,21 @@ main (int    argc,
   window = shopno_qs_window_new (settings);
   shopno_qs_window_set_grab_input (SHOPNO_QS_WINDOW (window), !opt_no_grab);
   g_signal_connect (window, "hide", G_CALLBACK (gtk_main_quit), NULL);
+
+  if (opt_status)
+    {
+      GtkWidget *status_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+      GtkWidget *status = shopno_qs_status_new ();
+
+      gtk_window_set_title (GTK_WINDOW (status_window), "Status icons");
+      gtk_container_set_border_width (GTK_CONTAINER (status_window), 8);
+      gtk_container_add (GTK_CONTAINER (status_window), status);
+      gtk_window_move (GTK_WINDOW (status_window), 520, 100);
+      gtk_widget_add_events (status_window, GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
+      g_signal_connect_swapped (status_window, "scroll-event",
+                                G_CALLBACK (shopno_qs_status_scroll), status);
+      gtk_widget_show (status_window);
+    }
 
   shopno_qs_window_popup (SHOPNO_QS_WINDOW (window), 100, 100);
   gtk_main ();

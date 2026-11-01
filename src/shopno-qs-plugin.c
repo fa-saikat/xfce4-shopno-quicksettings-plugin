@@ -20,6 +20,7 @@
 #include <xfconf/xfconf.h>
 
 #include "shopno-qs-settings.h"
+#include "shopno-qs-status.h"
 #include "shopno-qs-window.h"
 
 /* Space between the flyout and the panel or the edges of the screen */
@@ -42,7 +43,7 @@ struct _ShopnoQsPlugin
   guint             create_window_id;
 
   GtkWidget        *button;
-  GtkWidget        *box;
+  GtkWidget        *status;
   GtkWidget        *window;
 };
 
@@ -236,6 +237,39 @@ shopno_qs_plugin_button_press_event (GtkWidget      *button,
 
 
 
+static gboolean
+shopno_qs_plugin_scroll_event (GtkWidget      *button,
+                               GdkEventScroll *event,
+                               ShopnoQsPlugin *self)
+{
+  return shopno_qs_status_scroll (SHOPNO_QS_STATUS (self->status), event);
+}
+
+
+
+static gboolean
+shopno_qs_plugin_query_tooltip (GtkWidget      *button,
+                                gint            x,
+                                gint            y,
+                                gboolean        keyboard,
+                                GtkTooltip     *tooltip,
+                                ShopnoQsPlugin *self)
+{
+  gchar *text;
+
+  /* No tooltip over the open flyout */
+  if (self->window != NULL && gtk_widget_get_visible (self->window))
+    return FALSE;
+
+  text = shopno_qs_status_get_tooltip (SHOPNO_QS_STATUS (self->status));
+  gtk_tooltip_set_text (tooltip, text);
+  g_free (text);
+
+  return TRUE;
+}
+
+
+
 /*
  * XfcePanelPlugin
  */
@@ -294,7 +328,8 @@ shopno_qs_plugin_size_changed (XfcePanelPlugin *plugin,
   else
     gtk_widget_set_size_request (GTK_WIDGET (plugin), size, -1);
 
-  gtk_orientable_set_orientation (GTK_ORIENTABLE (self->box), orientation);
+  gtk_orientable_set_orientation (GTK_ORIENTABLE (self->status), orientation);
+  shopno_qs_status_set_icon_size (SHOPNO_QS_STATUS (self->status), xfce_panel_plugin_get_icon_size (plugin));
 
   return TRUE;
 }
@@ -338,18 +373,20 @@ shopno_qs_plugin_init (ShopnoQsPlugin *self)
   self->settings = shopno_qs_settings_new ();
 
   self->button = xfce_panel_create_toggle_button ();
-  gtk_widget_set_tooltip_text (self->button, _("Quick settings"));
+  gtk_widget_set_has_tooltip (self->button, TRUE);
+  g_signal_connect (self->button, "query-tooltip",
+                    G_CALLBACK (shopno_qs_plugin_query_tooltip), self);
+  gtk_widget_add_events (self->button, GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
+  g_signal_connect (self->button, "scroll-event",
+                    G_CALLBACK (shopno_qs_plugin_scroll_event), self);
   g_signal_connect (self->button, "button-press-event",
                     G_CALLBACK (shopno_qs_plugin_button_press_event), self);
   gtk_container_add (GTK_CONTAINER (self), self->button);
   xfce_panel_plugin_add_action_widget (XFCE_PANEL_PLUGIN (self), self->button);
 
-  /* Holds the status icons, like the Windows 11 taskbar */
-  self->box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-  gtk_container_add (GTK_CONTAINER (self->button), self->box);
-  gtk_box_pack_start (GTK_BOX (self->box),
-                      gtk_image_new_from_icon_name ("shopno-quicksettings", GTK_ICON_SIZE_BUTTON),
-                      FALSE, FALSE, 0);
+  /* Network, volume and battery, like the Windows 11 taskbar */
+  self->status = shopno_qs_status_new ();
+  gtk_container_add (GTK_CONTAINER (self->button), self->status);
 
   gtk_widget_show_all (self->button);
 }
