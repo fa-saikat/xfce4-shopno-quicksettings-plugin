@@ -22,6 +22,8 @@ shopno_qs_core = static_library(
   'shopno-qs-core',
   sources: [
     'shopno-qs-audio.c',
+    'shopno-qs-bluetooth.c',
+    'shopno-qs-bluetooth-ui.c',
     'shopno-qs-features.c',
     'shopno-qs-network.c',
     'shopno-qs-settings.c',
