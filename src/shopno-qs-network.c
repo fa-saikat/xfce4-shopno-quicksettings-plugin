@@ -157,12 +157,51 @@ shopno_qs_network_compare_timestamp (gconstpointer a,
 
 
 
-static GPtrArray *
-shopno_qs_network_ap_connections (ShopnoQsNetwork *self,
-                                  NMAccessPoint   *ap)
+static gchar *
+shopno_qs_network_connection_ssid (NMConnection *connection)
 {
-  const GPtrArray *available = nm_device_get_available_connections (NM_DEVICE (self->wifi));
-  GPtrArray       *connections = nm_access_point_filter_connections (ap, available);
+  NMSettingWireless *s_wifi = nm_connection_get_setting_wireless (connection);
+  GBytes            *ssid;
+
+  if (s_wifi == NULL)
+    return NULL;
+
+  ssid = nm_setting_wireless_get_ssid (s_wifi);
+  if (ssid == NULL || g_bytes_get_size (ssid) == 0)
+    return NULL;
+
+  return nm_utils_ssid_to_utf8 (g_bytes_get_data (ssid, NULL), g_bytes_get_size (ssid));
+}
+
+
+
+/* Saved connections for a network name that this device may use, most
+ * recently used first. Matched by name, as NetworkManager does when it
+ * picks a connection: an access point's BSSID or band does not make a
+ * saved network unknown. */
+static GPtrArray *
+shopno_qs_network_saved_connections (ShopnoQsNetwork *self,
+                                     const gchar     *ssid)
+{
+  const GPtrArray *all = nm_client_get_connections (self->client);
+  const gchar     *iface = nm_device_get_iface (NM_DEVICE (self->wifi));
+  GPtrArray       *connections = g_ptr_array_new ();
+
+  for (guint i = 0; all != NULL && i < all->len; i++)
+    {
+      NMConnection *connection = g_ptr_array_index (all, i);
+      const gchar  *bound = nm_connection_get_interface_name (connection);
+      gchar        *name;
+
+      /* A connection tied to another interface, like a renamed one */
+      if (bound != NULL && g_strcmp0 (bound, iface) != 0)
+        continue;
+
+      name = shopno_qs_network_connection_ssid (connection);
+      if (g_strcmp0 (name, ssid) == 0)
+        g_ptr_array_add (connections, connection);
+      g_free (name);
+    }
 
   g_ptr_array_sort (connections, shopno_qs_network_compare_timestamp);
 
@@ -246,6 +285,10 @@ shopno_qs_network_build_networks (ShopnoQsNetwork *self)
           network->ssid = ssid;
           network->security = shopno_qs_network_ap_security (ap);
           network->active = g_strcmp0 (ssid, self->active_ssid) == 0;
+
+          connections = shopno_qs_network_saved_connections (self, ssid);
+          network->known = connections->len > 0;
+          g_ptr_array_unref (connections);
           g_hash_table_insert (by_ssid, network->ssid, network);
           g_ptr_array_add (self->networks, network);
         }
@@ -255,13 +298,6 @@ shopno_qs_network_build_networks (ShopnoQsNetwork *self)
         }
 
       network->strength = MAX (network->strength, nm_access_point_get_strength (ap));
-
-      if (!network->known)
-        {
-          connections = shopno_qs_network_ap_connections (self, ap);
-          network->known = connections->len > 0;
-          g_ptr_array_unref (connections);
-        }
     }
 
   g_hash_table_destroy (by_ssid);
@@ -326,7 +362,18 @@ shopno_qs_network_update_state (ShopnoQsNetwork *self)
                                   G_CALLBACK (shopno_qs_network_schedule_changed), self);
     }
 
-  if (ap != NULL)
+  /* The name comes from the connection: the access point in use may be
+   * a hidden BSSID of the same router, which has no name */
+  if (self->wifi != NULL)
+    {
+      NMActiveConnection *active = nm_device_get_active_connection (NM_DEVICE (self->wifi));
+      NMRemoteConnection *connection = active != NULL ? nm_active_connection_get_connection (active) : NULL;
+
+      if (connection != NULL)
+        ssid = shopno_qs_network_connection_ssid (NM_CONNECTION (connection));
+    }
+
+  if (ssid == NULL && ap != NULL)
     ssid = shopno_qs_network_ap_ssid (ap);
 
   g_clear_pointer (&self->active_ssid, g_free);
@@ -403,6 +450,8 @@ shopno_qs_network_update_device (ShopnoQsNetwork *self)
                             G_CALLBACK (shopno_qs_network_device_state_changed), self);
           g_signal_connect_swapped (self->wifi, "notify::" NM_DEVICE_WIFI_ACTIVE_ACCESS_POINT,
                                     G_CALLBACK (shopno_qs_network_update_state), self);
+          g_signal_connect_swapped (self->wifi, "notify::" NM_DEVICE_ACTIVE_CONNECTION,
+                                    G_CALLBACK (shopno_qs_network_update_state), self);
           g_signal_connect_swapped (self->wifi, "access-point-added",
                                     G_CALLBACK (shopno_qs_network_schedule_networks), self);
           g_signal_connect_swapped (self->wifi, "access-point-removed",
@@ -450,6 +499,10 @@ shopno_qs_network_client_ready (GObject      *source,
                             G_CALLBACK (shopno_qs_network_update_device), self);
   g_signal_connect_swapped (client, "device-removed",
                             G_CALLBACK (shopno_qs_network_update_device), self);
+  g_signal_connect_swapped (client, "connection-added",
+                            G_CALLBACK (shopno_qs_network_schedule_networks), self);
+  g_signal_connect_swapped (client, "connection-removed",
+                            G_CALLBACK (shopno_qs_network_schedule_networks), self);
 
   shopno_qs_network_update_device (self);
 }
@@ -909,7 +962,7 @@ shopno_qs_network_connect (ShopnoQsNetwork *network,
   network->pending_ssid = g_strdup (ssid);
 
   security = shopno_qs_network_ap_security (ap);
-  connections = shopno_qs_network_ap_connections (network, ap);
+  connections = shopno_qs_network_saved_connections (network, ssid);
 
   if (connections->len > 0)
     {
@@ -1010,4 +1063,25 @@ shopno_qs_network_get_icon_name (ShopnoQsNetwork *network)
     return "network-vpn-symbolic";
 
   return "network-wired-symbolic";
+}
+
+
+
+void
+shopno_qs_network_refresh (ShopnoQsNetwork *network)
+{
+  g_return_if_fail (SHOPNO_IS_QS_NETWORK (network));
+
+  if (network->client == NULL)
+    return;
+
+  /* Read everything again and update now, not in an idle */
+  shopno_qs_network_update_state (network);
+
+  if (network->networks_id != 0)
+    {
+      g_source_remove (network->networks_id);
+      network->networks_id = 0;
+    }
+  shopno_qs_network_emit_networks_changed (network);
 }

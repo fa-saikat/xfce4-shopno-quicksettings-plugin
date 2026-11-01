@@ -26,9 +26,12 @@ G_DECLARE_FINAL_TYPE (ShopnoQsWindow, shopno_qs_window, SHOPNO, QS_WINDOW, GtkWi
 
 GtkWidget *shopno_qs_window_new            (ShopnoQsSettings *settings);
 
+/* With grow_up, y is the bottom edge, for a panel below the flyout: the
+ * flyout then grows upward. Otherwise y is the top edge. */
 void       shopno_qs_window_popup          (ShopnoQsWindow   *window,
                                             gint              x,
-                                            gint              y);
+                                            gint              y,
+                                            gboolean          grow_up);
 
 void       shopno_qs_window_set_grab_input (ShopnoQsWindow   *window,
                                             gboolean          grab_input);

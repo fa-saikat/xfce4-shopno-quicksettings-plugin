@@ -502,6 +502,14 @@ wifi_switch_state_set (GtkSwitch *toggle,
 
 
 static void
+wifi_window_mapped (Wifi *wifi)
+{
+  shopno_qs_network_refresh (wifi->network);
+}
+
+
+
+static void
 wifi_details (Wifi *wifi)
 {
   shopno_qs_network_request_scan (wifi->network);
@@ -587,6 +595,7 @@ shopno_qs_wifi_attach (ShopnoQsWindow *window)
   gtk_widget_set_no_show_all (wifi->list, TRUE);
   gtk_widget_set_no_show_all (wifi->off_label, TRUE);
 
+  g_signal_connect_swapped (window, "map", G_CALLBACK (wifi_window_mapped), wifi);
   g_signal_connect_swapped (wifi->network, "changed", G_CALLBACK (wifi_update), wifi);
   g_signal_connect_swapped (wifi->network, "networks-changed", G_CALLBACK (wifi_update_networks), wifi);
   g_signal_connect (wifi->network, "connect-failed", G_CALLBACK (wifi_connect_failed), wifi);

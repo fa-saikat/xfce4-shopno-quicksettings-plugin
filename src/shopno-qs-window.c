@@ -23,8 +23,14 @@
 #define WINDOW_WIDTH 360
 #define TILE_COLUMNS 3
 
-/* Detail pages scroll beyond this height */
-#define PAGE_MAX_HEIGHT 400
+/* Detail pages grow up to this height, then scroll */
+#define PAGE_MAX_HEIGHT 560
+
+/* Space kept between the flyout and the edges of the work area */
+#define EDGE_GAP 12
+
+#define PAGE_SCROLL_KEY "shopno-qs-page-scroll"
+#define PAGE_HEADER_KEY "shopno-qs-page-header"
 
 #define TILE_ID_KEY "shopno-qs-tile-id"
 
@@ -55,6 +61,7 @@ struct _ShopnoQsWindow
   GtkWidget        *main_page;
   GtkWidget        *tiles;
   GtkWidget        *sliders;
+  GtkWidget        *footer;
   GtkWidget        *footer_start;
   GtkWidget        *footer_end;
 
@@ -62,6 +69,14 @@ struct _ShopnoQsWindow
   GdkSeat          *grab_seat;
   guint             grab_retry_id;
   guint             grab_retries;
+
+  /* The edge next to the panel stays put when the height changes: the
+   * bottom edge for a panel below, the top edge otherwise */
+  gboolean          anchored;
+  gint              anchor_x;
+  gint              anchor_y;
+  gboolean          grow_up;
+  gint              placed_height;
 };
 
 static GParamSpec *properties[N_PROPERTIES];
@@ -236,8 +251,85 @@ shopno_qs_window_ungrab (ShopnoQsWindow *self)
 
 
 /*
+ * Placement
+ */
+
+static void
+shopno_qs_window_get_workarea (ShopnoQsWindow *self,
+                               GdkRectangle   *workarea)
+{
+  GdkDisplay *display = gtk_widget_get_display (GTK_WIDGET (self));
+  GdkMonitor *monitor = gdk_display_get_monitor_at_point (display, self->anchor_x, self->anchor_y);
+
+  if (monitor != NULL)
+    gdk_monitor_get_workarea (monitor, workarea);
+  else
+    *workarea = (GdkRectangle) { 0, 0, G_MAXINT / 2, G_MAXINT / 2 };
+}
+
+
+
+static void
+shopno_qs_window_place (ShopnoQsWindow *self,
+                        gint            height)
+{
+  GdkRectangle workarea;
+  gint         y;
+
+  if (!self->anchored)
+    return;
+
+  shopno_qs_window_get_workarea (self, &workarea);
+
+  if (self->grow_up)
+    y = self->anchor_y - height;
+  else
+    y = MIN (self->anchor_y, workarea.y + workarea.height - EDGE_GAP - height);
+
+  y = MAX (y, workarea.y + EDGE_GAP);
+
+  self->placed_height = height;
+  gtk_window_move (GTK_WINDOW (self), self->anchor_x, y);
+}
+
+
+
+/* The room a detail page has on the side away from the panel */
+static gint
+shopno_qs_window_page_room (ShopnoQsWindow *self)
+{
+  GdkRectangle workarea;
+  gint         footer = gtk_widget_get_allocated_height (self->footer);
+
+  if (!self->anchored)
+    return PAGE_MAX_HEIGHT;
+
+  shopno_qs_window_get_workarea (self, &workarea);
+
+  if (self->grow_up)
+    return self->anchor_y - workarea.y - EDGE_GAP - footer;
+
+  return workarea.y + workarea.height - EDGE_GAP - self->anchor_y - footer;
+}
+
+
+
+/*
  * GtkWidget
  */
+
+static void
+shopno_qs_window_size_allocate (GtkWidget     *widget,
+                                GtkAllocation *allocation)
+{
+  ShopnoQsWindow *self = SHOPNO_QS_WINDOW (widget);
+
+  GTK_WIDGET_CLASS (shopno_qs_window_parent_class)->size_allocate (widget, allocation);
+
+  /* A detail page or a wrapped label changed the height */
+  if (gtk_widget_get_visible (widget) && allocation->height != self->placed_height)
+    shopno_qs_window_place (self, allocation->height);
+}
 
 static gboolean
 shopno_qs_window_map_event (GtkWidget   *widget,
@@ -434,6 +526,7 @@ shopno_qs_window_class_init (ShopnoQsWindowClass *klass)
   gobject_class->dispose = shopno_qs_window_dispose;
 
   widget_class->map_event = shopno_qs_window_map_event;
+  widget_class->size_allocate = shopno_qs_window_size_allocate;
   widget_class->hide = shopno_qs_window_hide;
   widget_class->button_press_event = shopno_qs_window_button_press_event;
   widget_class->key_press_event = shopno_qs_window_key_press_event;
@@ -483,7 +576,9 @@ shopno_qs_window_init (ShopnoQsWindow *self)
   self->stack = gtk_stack_new ();
   gtk_stack_set_transition_duration (GTK_STACK (self->stack), 150);
   gtk_stack_set_vhomogeneous (GTK_STACK (self->stack), FALSE);
-  gtk_stack_set_interpolate_size (GTK_STACK (self->stack), TRUE);
+  /* The window moves to keep its anchored edge in place whenever its
+   * height changes, so change it once rather than on every frame */
+  gtk_stack_set_interpolate_size (GTK_STACK (self->stack), FALSE);
   gtk_box_pack_start (GTK_BOX (self->frame), self->stack, TRUE, TRUE, 0);
 
   self->main_page = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
@@ -499,7 +594,7 @@ shopno_qs_window_init (ShopnoQsWindow *self)
   gtk_flow_box_set_selection_mode (GTK_FLOW_BOX (self->tiles), GTK_SELECTION_NONE);
   gtk_flow_box_set_activate_on_single_click (GTK_FLOW_BOX (self->tiles), FALSE);
   gtk_flow_box_set_column_spacing (GTK_FLOW_BOX (self->tiles), 12);
-  gtk_flow_box_set_row_spacing (GTK_FLOW_BOX (self->tiles), 16);
+  gtk_flow_box_set_row_spacing (GTK_FLOW_BOX (self->tiles), 22);
   gtk_style_context_add_class (gtk_widget_get_style_context (self->tiles), "shopno-qs-tiles");
   gtk_box_pack_start (GTK_BOX (self->main_page), self->tiles, FALSE, FALSE, 0);
 
@@ -508,7 +603,7 @@ shopno_qs_window_init (ShopnoQsWindow *self)
   gtk_box_pack_start (GTK_BOX (self->main_page), self->sliders, FALSE, FALSE, 0);
 
   /* Footer band: battery on the left, settings on the right */
-  footer = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+  footer = self->footer = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_style_context_add_class (gtk_widget_get_style_context (footer), "shopno-qs-footer");
   gtk_box_pack_end (GTK_BOX (self->frame), footer, FALSE, FALSE, 0);
 
@@ -533,15 +628,25 @@ shopno_qs_window_new (ShopnoQsSettings *settings)
 void
 shopno_qs_window_popup (ShopnoQsWindow *window,
                         gint            x,
-                        gint            y)
+                        gint            y,
+                        gboolean        grow_up)
 {
+  GtkRequisition size;
+
   g_return_if_fail (SHOPNO_IS_QS_WINDOW (window));
 
   /* The compositor may have been toggled since the last popup */
   if (!gtk_widget_get_visible (GTK_WIDGET (window)))
     shopno_qs_window_update_visual (window);
 
-  gtk_window_move (GTK_WINDOW (window), x, y);
+  window->anchored = TRUE;
+  window->anchor_x = x;
+  window->anchor_y = y;
+  window->grow_up = grow_up;
+
+  gtk_widget_get_preferred_size (GTK_WIDGET (window), NULL, &size);
+  shopno_qs_window_place (window, size.height);
+
   gtk_window_present_with_time (GTK_WINDOW (window), gtk_get_current_event_time ());
 }
 
@@ -650,6 +755,9 @@ shopno_qs_window_add_page (ShopnoQsWindow *window,
   gtk_container_add (GTK_CONTAINER (scroll), content);
   gtk_box_pack_start (GTK_BOX (page), scroll, TRUE, TRUE, 0);
 
+  g_object_set_data (G_OBJECT (page), PAGE_SCROLL_KEY, scroll);
+  g_object_set_data (G_OBJECT (page), PAGE_HEADER_KEY, header);
+
   gtk_widget_show_all (page);
   gtk_stack_add_named (GTK_STACK (window->stack), page, name);
 }
@@ -660,7 +768,25 @@ void
 shopno_qs_window_show_page (ShopnoQsWindow *window,
                             const gchar    *name)
 {
+  GtkWidget *page;
+  GtkWidget *scroll;
+  gint       header;
+  gint       room;
+
   g_return_if_fail (SHOPNO_IS_QS_WINDOW (window));
+
+  page = gtk_stack_get_child_by_name (GTK_STACK (window->stack), name);
+  g_return_if_fail (page != NULL);
+
+  /* Never shorter than the main page, so the flyout does not shrink */
+  gtk_widget_set_size_request (page, -1, gtk_widget_get_allocated_height (window->main_page));
+
+  /* Grow up to the room left on the screen, then scroll */
+  scroll = g_object_get_data (G_OBJECT (page), PAGE_SCROLL_KEY);
+  gtk_widget_get_preferred_height (g_object_get_data (G_OBJECT (page), PAGE_HEADER_KEY), NULL, &header);
+  room = shopno_qs_window_page_room (window) - header - 24;
+  gtk_scrolled_window_set_max_content_height (GTK_SCROLLED_WINDOW (scroll),
+                                              CLAMP (room, 120, PAGE_MAX_HEIGHT));
 
   gtk_stack_set_visible_child_full (GTK_STACK (window->stack), name,
                                     GTK_STACK_TRANSITION_TYPE_SLIDE_LEFT);

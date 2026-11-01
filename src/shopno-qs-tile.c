@@ -86,7 +86,7 @@ static void
 shopno_qs_tile_init (ShopnoQsTile *self)
 {
   gtk_orientable_set_orientation (GTK_ORIENTABLE (self), GTK_ORIENTATION_VERTICAL);
-  gtk_box_set_spacing (GTK_BOX (self), 8);
+  gtk_box_set_spacing (GTK_BOX (self), 10);
   gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (self)), "shopno-qs-tile");
 
   self->buttons = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
@@ -110,10 +110,15 @@ shopno_qs_tile_init (ShopnoQsTile *self)
                             G_CALLBACK (shopno_qs_tile_details_clicked), self);
   gtk_box_pack_start (GTK_BOX (self->buttons), self->details_button, FALSE, FALSE, 0);
 
+  /* Up to two lines, so a long network name stays readable */
   self->label = gtk_label_new (NULL);
+  gtk_label_set_line_wrap (GTK_LABEL (self->label), TRUE);
+  gtk_label_set_line_wrap_mode (GTK_LABEL (self->label), PANGO_WRAP_WORD_CHAR);
+  gtk_label_set_lines (GTK_LABEL (self->label), 2);
   gtk_label_set_ellipsize (GTK_LABEL (self->label), PANGO_ELLIPSIZE_END);
   gtk_label_set_max_width_chars (GTK_LABEL (self->label), 1);
   gtk_label_set_justify (GTK_LABEL (self->label), GTK_JUSTIFY_CENTER);
+  gtk_widget_set_valign (self->label, GTK_ALIGN_START);
   gtk_style_context_add_class (gtk_widget_get_style_context (self->label), "shopno-qs-tile-label");
   gtk_box_pack_start (GTK_BOX (self), self->label, FALSE, FALSE, 0);
 }

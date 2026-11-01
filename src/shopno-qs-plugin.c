@@ -252,7 +252,9 @@ shopno_qs_plugin_add_gap (ShopnoQsPlugin *self,
 static void
 shopno_qs_plugin_popup (ShopnoQsPlugin *self)
 {
-  gint x, y;
+  gint           x, y;
+  GtkRequisition size;
+  gboolean       grow_up;
 
   shopno_qs_plugin_create_window (self);
 
@@ -263,7 +265,17 @@ shopno_qs_plugin_popup (ShopnoQsPlugin *self)
 
   xfce_panel_plugin_position_widget (XFCE_PANEL_PLUGIN (self), self->window, self->button, &x, &y);
   shopno_qs_plugin_add_gap (self, &x, &y);
-  shopno_qs_window_popup (SHOPNO_QS_WINDOW (self->window), x, y);
+
+  /* Above a bottom panel, keep the bottom edge next to the panel and let
+   * taller pages grow upward */
+  grow_up = xfce_panel_plugin_arrow_type (XFCE_PANEL_PLUGIN (self)) == GTK_ARROW_UP;
+  if (grow_up)
+    {
+      gtk_widget_get_preferred_size (self->window, NULL, &size);
+      y += size.height;
+    }
+
+  shopno_qs_window_popup (SHOPNO_QS_WINDOW (self->window), x, y, grow_up);
 }
 
 
