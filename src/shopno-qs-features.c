@@ -30,4 +30,7 @@ shopno_qs_features_attach (ShopnoQsWindow *window)
   /* Sliders */
   shopno_qs_brightness_attach (window);
   shopno_qs_volume_attach (window);
+
+  /* Footer */
+  shopno_qs_footer_attach (window);
 }

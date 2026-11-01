@@ -69,6 +69,13 @@ window:not(.composited) .shopno-qs-footer {
   border-radius: 0;
 }
 
+.shopno-qs-footer button.static,
+.shopno-qs-footer button.static:hover,
+.shopno-qs-footer button.static:active {
+  background: none;
+  box-shadow: none;
+}
+
 .shopno-qs-footer button {
   min-height: 32px;
   min-width: 32px;
