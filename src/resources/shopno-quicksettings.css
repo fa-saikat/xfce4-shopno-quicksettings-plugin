@@ -17,7 +17,7 @@ window.shopno-qs-window.background {
 /* Frame */
 
 .shopno-qs-frame {
-  border-radius: 8px;
+  border-radius: 3px;
   border: 1px solid alpha(@theme_fg_color, 0.1);
   background-color: @theme_bg_color;
 }
@@ -38,11 +38,11 @@ window:not(.composited) .shopno-qs-frame {
 /* Main page */
 
 .shopno-qs-main {
-  padding: 20px 20px 12px 20px;
+  padding: 24px 24px 16px 24px;
 }
 
 .shopno-qs-tiles {
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .shopno-qs-tiles flowboxchild {
@@ -58,11 +58,11 @@ window:not(.composited) .shopno-qs-frame {
 /* Footer band */
 
 .shopno-qs-footer {
-  min-height: 48px;
+  min-height: 52px;
   padding: 0 12px;
   background-color: alpha(@theme_fg_color, 0.03);
   border-top: 1px solid alpha(@theme_fg_color, 0.08);
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 3px 3px;
 }
 
 window:not(.composited) .shopno-qs-footer {
@@ -80,7 +80,7 @@ window:not(.composited) .shopno-qs-footer {
   min-height: 32px;
   min-width: 32px;
   padding: 0 8px;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 /* Quick action tiles
@@ -89,9 +89,9 @@ window:not(.composited) .shopno-qs-footer {
  * Windows 11 accent. Split tiles draw a divider between the two parts. */
 
 .shopno-qs-tile-buttons button {
-  min-height: 46px;
+  min-height: 50px;
   padding: 0;
-  border-radius: 4px;
+  border-radius: 3px;
   border: 1px solid alpha(@theme_fg_color, 0.08);
   background-image: none;
   background-color: alpha(@theme_fg_color, 0.05);
@@ -110,13 +110,13 @@ window:not(.composited) .shopno-qs-footer {
 }
 
 .shopno-qs-tile-buttons.split .shopno-qs-tile-main {
-  border-radius: 4px 0 0 4px;
+  border-radius: 3px 0 0 3px;
   border-right-width: 0;
 }
 
 .shopno-qs-tile-buttons.split .shopno-qs-tile-details {
   min-width: 34px;
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 3px 3px 0;
   border-left: 1px solid alpha(@theme_fg_color, 0.12);
 }
 
@@ -159,7 +159,7 @@ window:not(.composited) .shopno-qs-footer {
 .shopno-qs-page-header button {
   min-height: 32px;
   min-width: 32px;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .shopno-qs-page-title {
@@ -178,7 +178,7 @@ window:not(.composited) .shopno-qs-footer {
 
 .shopno-qs-list row {
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: 3px;
   outline-offset: -2px;
 }
 
@@ -200,7 +200,7 @@ window:not(.composited) .shopno-qs-footer {
 .shopno-qs-page-link {
   margin-top: 8px;
   padding: 6px 12px;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .shopno-qs-empty {
@@ -212,14 +212,14 @@ window:not(.composited) .shopno-qs-footer {
  * the Windows 11 sliders */
 
 .shopno-qs-slider {
-  min-height: 48px;
+  min-height: 60px;
 }
 
 .shopno-qs-slider button {
   min-height: 32px;
   min-width: 32px;
   padding: 0;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .shopno-qs-slider button.static,
@@ -294,12 +294,12 @@ window:not(.composited) .shopno-qs-footer {
 .shopno-qs-row-actions button {
   min-height: 30px;
   padding: 0 16px;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .shopno-qs-row-actions entry {
   min-height: 32px;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .shopno-qs-row-message {
