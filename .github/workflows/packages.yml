@@ -1,0 +1,185 @@
+name: Packages
+
+# Builds and test-installs the packages. release.yml calls this when a
+# release/<version> pull request is merged, and attaches the packages to
+# a draft release.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to build
+        type: string
+        required: true
+  pull_request:
+    paths:
+      - 'packaging/**'
+      - '.github/workflows/packages.yml'
+      - 'meson.build'
+      - 'data/meson.build'
+      - 'src/meson.build'
+  workflow_dispatch:
+
+env:
+  NAME: xfce4-shopno-quicksettings-plugin
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  version:
+    name: Check version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - id: version
+        name: Read version
+        run: |
+          version=$(sed -n "s/^ *version: '\(.*\)',$/\1/p" meson.build | head -1)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # Every packaging file must carry the same version as meson.build
+          grep -q "^$NAME ($version-" packaging/debian/changelog
+          grep -q "^Version: *$version$" packaging/rpm/$NAME.spec
+          grep -q "^pkgver=$version$" packaging/arch/PKGBUILD
+
+  deb:
+    name: ${{ matrix.name }}
+    needs: version
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 13 (.deb)
+            image: debian:trixie
+            suffix: debian13
+          - name: Ubuntu 24.04 (.deb)
+            image: ubuntu:24.04
+            suffix: ubuntu24.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential devscripts equivs
+          cp -r packaging/debian debian
+          mk-build-deps --install --remove --tool 'apt-get -y --no-install-recommends' debian/control
+
+      - name: Build
+        run: |
+          # One package per release, so the version says which one it is for
+          version=${{ needs.version.outputs.version }}
+          sed -i "1s/($version-\([0-9]*\))/($version-\1~${{ matrix.suffix }})/" debian/changelog
+          dpkg-buildpackage -b -us -uc
+          mkdir out
+          mv ../*.deb out/
+          ls -l out
+
+      - name: Test install
+        run: |
+          apt-get install -y ./out/${NAME}_*.deb
+          test -f /usr/lib/*/xfce4/panel/plugins/libshopno-quicksettings.so
+          test -f /usr/share/xfce4/panel/plugins/shopno-quicksettings.desktop
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.suffix }}
+          path: out/${{ env.NAME }}_*.deb
+
+  rpm:
+    name: Fedora (.rpm)
+    needs: version
+    runs-on: ubuntu-24.04
+    container: fedora:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y rpm-build 'dnf-command(builddep)'
+          dnf builddep -y packaging/rpm/$NAME.spec
+
+      - name: Build
+        run: |
+          version=${{ needs.version.outputs.version }}
+          mkdir -p ~/rpmbuild/SOURCES
+          tar --exclude=.git --transform "s,^\.,$NAME-$version," \
+            -czf ~/rpmbuild/SOURCES/$NAME-$version.tar.gz .
+          rpmbuild -ba packaging/rpm/$NAME.spec
+          mkdir out
+          find ~/rpmbuild/RPMS ~/rpmbuild/SRPMS -name '*.rpm' -exec mv {} out/ \;
+          ls -l out
+
+      - name: Test install
+        run: |
+          dnf install -y out/$NAME-[0-9]*.$(uname -m).rpm
+          test -f /usr/lib64/xfce4/panel/plugins/libshopno-quicksettings.so
+          test -f /usr/share/xfce4/panel/plugins/shopno-quicksettings.desktop
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-fedora
+          path: |
+            out/*.rpm
+            !out/*-debuginfo-*.rpm
+            !out/*-debugsource-*.rpm
+
+  arch:
+    name: Arch Linux (.pkg.tar.zst)
+    needs: version
+    runs-on: ubuntu-24.04
+    container: archlinux:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed base-devel
+          source packaging/arch/PKGBUILD
+          pacman -S --noconfirm --needed "${depends[@]}" "${makedepends[@]}"
+
+      - name: Build
+        run: |
+          # makepkg uses a source file that is already present instead of
+          # downloading the release tarball, which does not exist yet
+          version=${{ needs.version.outputs.version }}
+          mkdir /build
+          cp packaging/arch/PKGBUILD /build/
+          tar --exclude=.git --transform "s,^\.,$NAME-$version," \
+            -czf /build/$NAME-$version.tar.gz .
+          useradd -m builder
+          chown -R builder /build
+          su builder -c 'cd /build && makepkg --nodeps'
+          mkdir out
+          mv /build/*.pkg.tar.zst out/
+          ls -l out
+
+      - name: Test install
+        run: |
+          pacman -U --noconfirm out/$NAME-[0-9]*.pkg.tar.zst
+          test -f /usr/lib/xfce4/panel/plugins/libshopno-quicksettings.so
+          test -f /usr/share/xfce4/panel/plugins/shopno-quicksettings.desktop
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch
+          path: |
+            out/*.pkg.tar.zst
+            !out/*-debug-*.pkg.tar.zst
