@@ -59,6 +59,9 @@ GPtrArray       *shopno_qs_network_get_wifi_networks  (ShopnoQsNetwork *network)
 
 void             shopno_qs_network_request_scan       (ShopnoQsNetwork *network);
 
+/* Reads the state again, in case a change was missed */
+void             shopno_qs_network_refresh            (ShopnoQsNetwork *network);
+
 /* Connects to a visible network. The password is only used for secured
  * networks; NULL activates a saved connection as it is. */
 void             shopno_qs_network_connect            (ShopnoQsNetwork *network,
