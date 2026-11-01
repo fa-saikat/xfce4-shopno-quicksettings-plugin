@@ -91,7 +91,8 @@ main (int    argc,
       gtk_widget_show (dialog);
     }
 
-  shopno_qs_window_popup (SHOPNO_QS_WINDOW (window), 100, 100);
+  /* As above a bottom panel: the bottom edge stays at y = 840 */
+  shopno_qs_window_popup (SHOPNO_QS_WINDOW (window), 100, 840, TRUE);
   gtk_main ();
 
   gtk_widget_destroy (window);
