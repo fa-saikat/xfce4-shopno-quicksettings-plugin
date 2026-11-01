@@ -1,0 +1,126 @@
+name: Bug report
+description: Something does not work, crashes, or behaves differently than described
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. For problems with how the flyout
+        looks, use the **Visual or layout issue** form instead.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [existing issues](https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin/issues?q=is%3Aissue) and this has not been reported.
+          required: true
+        - label: I am on the latest release, or I built the latest `main`.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the quick settings
+        2. Open the Wi-Fi page
+        3. Click a saved network
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Shopno Quick Settings version
+      description: Shown in the plugin's About dialog (right-click the quick settings button, then About), or the commit you built.
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - .deb package
+        - .rpm package
+        - AUR
+        - Distribution repository
+        - Built from source
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution and version
+      placeholder: Debian 13
+    validations:
+      required: true
+
+  - type: input
+    id: xfce
+    attributes:
+      label: Xfce panel version
+      description: Output of `xfce4-panel --version`
+      placeholder: "4.20.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: compositor
+    attributes:
+      label: Compositor
+      options:
+        - xfwm4 compositor
+        - picom, blur off
+        - picom, blur on
+        - None
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: services
+    attributes:
+      label: System services
+      description: The sound server, and whether NetworkManager, BlueZ and UPower are running. Only what applies to the bug.
+      placeholder: PipeWire 1.4, NetworkManager 1.52, BlueZ 5.82
+
+  - type: input
+    id: themes
+    attributes:
+      label: GTK theme and icon theme
+      placeholder: Adwaita-dark, Papirus
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Restart the panel from a terminal with debug output, reproduce the bug, and paste what it prints:
+        `xfce4-panel -q; PANEL_DEBUG=1 xfce4-panel`
+      render: text
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or video
+      description: Drag files here if they help explain the problem.

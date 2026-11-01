@@ -1,0 +1,3 @@
+data/shopno-quicksettings.desktop.in
+src/shopno-qs-plugin.c
+src/shopno-qs-window.c

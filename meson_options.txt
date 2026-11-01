@@ -1,0 +1,6 @@
+option(
+  'preview',
+  type: 'boolean',
+  value: false,
+  description: 'Build shopno-quicksettings-preview, which opens the flyout outside the panel for development',
+)

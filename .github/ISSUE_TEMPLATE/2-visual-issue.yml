@@ -1,0 +1,77 @@
+name: Visual or layout issue
+description: Something looks wrong, breaks with a theme, or differs from Windows 11
+labels: [design]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Shopno Quick Settings follows your GTK and icon theme, so the theme and font matter
+        for almost every visual report. Screenshots are required.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [existing issues](https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin/issues?q=is%3Aissue) and this has not been reported.
+          required: true
+        - label: I am on the latest release, or I built the latest `main`.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What looks wrong?
+      description: For example spacing, sizes, colours, clipped text, or a difference from Windows 11.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Screenshot of Shopno Quick Settings
+    validations:
+      required: true
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference
+      description: A Windows 11 screenshot or a mockup of how it should look, if you have one.
+
+  - type: input
+    id: themes
+    attributes:
+      label: GTK theme and icon theme
+      placeholder: Adwaita-dark, Papirus
+    validations:
+      required: true
+
+  - type: input
+    id: font
+    attributes:
+      label: Font, font size and display scaling
+      placeholder: Noto Sans 10, 100%
+    validations:
+      required: true
+
+  - type: dropdown
+    id: compositor
+    attributes:
+      label: Compositor
+      options:
+        - xfwm4 compositor
+        - picom, blur off
+        - picom, blur on
+        - None
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Shopno Quick Settings version, distribution and Xfce version
+      placeholder: 0.1.0, Debian 13, Xfce 4.20
+    validations:
+      required: true

@@ -1,0 +1,9 @@
+[Xfce Panel]
+Type=X-XFCE-PanelPlugin
+Name=Shopno Quick Settings
+Comment=Windows 11-style quick settings: Wi-Fi, Bluetooth, volume, brightness and battery
+Icon=shopno-quicksettings
+X-XFCE-Module=shopno-quicksettings
+X-XFCE-Internal=false
+X-XFCE-Unique=false
+X-XFCE-API=2.0
