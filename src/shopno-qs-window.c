@@ -327,6 +327,22 @@ shopno_qs_window_key_press_event (GtkWidget   *widget,
 
 
 
+/* xfwm4 does not give keyboard focus to menu-type windows; the seat grab
+ * delivers the input instead. GTK would then draw the whole flyout in the
+ * dimmed backdrop style of an unfocused window, which a menu never is. */
+static gboolean
+shopno_qs_window_window_state_event (GtkWidget           *widget,
+                                     GdkEventWindowState *event)
+{
+  gboolean result = GTK_WIDGET_CLASS (shopno_qs_window_parent_class)->window_state_event (widget, event);
+
+  gtk_widget_unset_state_flags (widget, GTK_STATE_FLAG_BACKDROP);
+
+  return result;
+}
+
+
+
 static gboolean
 shopno_qs_window_focus_out_event (GtkWidget     *widget,
                                   GdkEventFocus *event)
@@ -422,6 +438,7 @@ shopno_qs_window_class_init (ShopnoQsWindowClass *klass)
   widget_class->button_press_event = shopno_qs_window_button_press_event;
   widget_class->key_press_event = shopno_qs_window_key_press_event;
   widget_class->focus_out_event = shopno_qs_window_focus_out_event;
+  widget_class->window_state_event = shopno_qs_window_window_state_event;
   widget_class->style_updated = shopno_qs_window_style_updated;
 
   properties[PROP_SETTINGS] =
