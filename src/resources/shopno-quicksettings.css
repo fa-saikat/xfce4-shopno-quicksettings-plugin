@@ -75,3 +75,123 @@ window:not(.composited) .shopno-qs-footer {
   padding: 0 8px;
   border-radius: 4px;
 }
+
+/* Quick action tiles
+ *
+ * Off: a subtle filled button. On: the theme's accent color, like the
+ * Windows 11 accent. Split tiles draw a divider between the two parts. */
+
+.shopno-qs-tile-buttons button {
+  min-height: 46px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid alpha(@theme_fg_color, 0.08);
+  background-image: none;
+  background-color: alpha(@theme_fg_color, 0.05);
+  box-shadow: none;
+  text-shadow: none;
+  -gtk-icon-shadow: none;
+  outline-offset: -3px;
+}
+
+.shopno-qs-tile-buttons button:hover {
+  background-color: alpha(@theme_fg_color, 0.09);
+}
+
+.shopno-qs-tile-buttons button:active {
+  background-color: alpha(@theme_fg_color, 0.04);
+}
+
+.shopno-qs-tile-buttons.split .shopno-qs-tile-main {
+  border-radius: 4px 0 0 4px;
+  border-right-width: 0;
+}
+
+.shopno-qs-tile-buttons.split .shopno-qs-tile-details {
+  min-width: 34px;
+  border-radius: 0 4px 4px 0;
+  border-left: 1px solid alpha(@theme_fg_color, 0.12);
+}
+
+.shopno-qs-tile-buttons.active button {
+  color: @theme_selected_fg_color;
+  border-color: @theme_selected_bg_color;
+  background-color: @theme_selected_bg_color;
+}
+
+.shopno-qs-tile-buttons.active button:hover {
+  background-color: shade(@theme_selected_bg_color, 1.1);
+}
+
+.shopno-qs-tile-buttons.active button:active {
+  background-color: shade(@theme_selected_bg_color, 0.92);
+}
+
+.shopno-qs-tile-buttons.active.split .shopno-qs-tile-details {
+  border-left-color: alpha(@theme_selected_fg_color, 0.3);
+}
+
+.shopno-qs-tile-buttons button:disabled {
+  opacity: 0.5;
+}
+
+.shopno-qs-tile-label {
+  font-size: 0.92em;
+}
+
+/* Detail pages */
+
+.shopno-qs-page {
+  padding: 12px 12px 12px 12px;
+}
+
+.shopno-qs-page-header {
+  margin-bottom: 8px;
+}
+
+.shopno-qs-page-header button {
+  min-height: 32px;
+  min-width: 32px;
+  border-radius: 4px;
+}
+
+.shopno-qs-page-title {
+  font-weight: bold;
+}
+
+.shopno-qs-page scrolledwindow {
+  background: none;
+}
+
+/* Rows in detail pages: networks, devices, audio outputs */
+
+.shopno-qs-list {
+  background: none;
+}
+
+.shopno-qs-list row {
+  padding: 8px 12px;
+  border-radius: 4px;
+  outline-offset: -2px;
+}
+
+.shopno-qs-list row:hover {
+  background-color: alpha(@theme_fg_color, 0.06);
+}
+
+.shopno-qs-list row:selected,
+.shopno-qs-list row.current {
+  color: @theme_fg_color;
+  background-color: alpha(@theme_selected_bg_color, 0.18);
+}
+
+.shopno-qs-row-subtitle {
+  font-size: 0.85em;
+  color: alpha(@theme_fg_color, 0.65);
+}
+
+.shopno-qs-page-link {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 4px;
+}

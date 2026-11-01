@@ -44,6 +44,18 @@ void       shopno_qs_window_add_footer     (ShopnoQsWindow   *window,
                                             GtkWidget        *widget,
                                             gboolean          end);
 
+/* Detail pages, opened by the chevron of a split tile. The content sits
+ * in a scrolled area under a header with a back button and the title. */
+void       shopno_qs_window_add_page       (ShopnoQsWindow   *window,
+                                            const gchar      *name,
+                                            const gchar      *title,
+                                            GtkWidget        *content);
+
+void       shopno_qs_window_show_page      (ShopnoQsWindow   *window,
+                                            const gchar      *name);
+
+void       shopno_qs_window_show_main      (ShopnoQsWindow   *window);
+
 G_END_DECLS
 
 #endif /* !__SHOPNO_QS_WINDOW_H__ */

@@ -19,6 +19,7 @@ shopno_qs_core = static_library(
   'shopno-qs-core',
   sources: [
     'shopno-qs-settings.c',
+    'shopno-qs-tile.c',
     'shopno-qs-window.c',
     resources,
   ],
