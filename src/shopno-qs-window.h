@@ -33,6 +33,17 @@ void       shopno_qs_window_popup          (ShopnoQsWindow   *window,
 void       shopno_qs_window_set_grab_input (ShopnoQsWindow   *window,
                                             gboolean          grab_input);
 
+/* Content, filled in by the feature modules */
+void       shopno_qs_window_add_tile       (ShopnoQsWindow   *window,
+                                            GtkWidget        *tile);
+
+void       shopno_qs_window_add_slider     (ShopnoQsWindow   *window,
+                                            GtkWidget        *slider);
+
+void       shopno_qs_window_add_footer     (ShopnoQsWindow   *window,
+                                            GtkWidget        *widget,
+                                            gboolean          end);
+
 G_END_DECLS
 
 #endif /* !__SHOPNO_QS_WINDOW_H__ */
