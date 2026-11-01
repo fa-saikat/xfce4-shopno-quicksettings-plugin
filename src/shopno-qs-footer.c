@@ -118,11 +118,7 @@ shopno_qs_footer_attach (ShopnoQsWindow *window)
   GtkWidget *box;
   GtkWidget *button;
   gchar     *command;
-  GIcon     *gear;
-  const gchar *gear_names[] = { "emblem-system-symbolic", "system-run-symbolic",
-                                "preferences-system-symbolic", NULL };
 
-  gear = g_themed_icon_new_from_names ((gchar **) gear_names, -1);
   footer->window = window;
   footer->battery = shopno_qs_battery_get_default ();
   g_object_set_data_full (G_OBJECT (window), "shopno-qs-footer", footer, footer_free);
@@ -155,11 +151,7 @@ shopno_qs_footer_attach (ShopnoQsWindow *window)
   command = shopno_qs_find_command (settings_commands);
   if (command != NULL)
     {
-      /* A gear, as on Windows: themes name it differently */
-      button = gtk_button_new ();
-      gtk_container_add (GTK_CONTAINER (button),
-                         gtk_image_new_from_gicon (gear, GTK_ICON_SIZE_BUTTON));
-      gtk_widget_show_all (button);
+      button = gtk_button_new_from_icon_name ("preferences-system-symbolic", GTK_ICON_SIZE_BUTTON);
       gtk_button_set_relief (GTK_BUTTON (button), GTK_RELIEF_NONE);
       gtk_widget_set_valign (button, GTK_ALIGN_CENTER);
       gtk_widget_set_tooltip_text (button, _("All settings"));
@@ -168,8 +160,6 @@ shopno_qs_footer_attach (ShopnoQsWindow *window)
       shopno_qs_window_add_footer (window, button, TRUE);
       g_free (command);
     }
-
-  g_object_unref (gear);
 
   g_signal_connect_swapped (footer->battery, "changed", G_CALLBACK (footer_update_battery), footer);
   footer_update_battery (footer);
