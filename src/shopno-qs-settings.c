@@ -20,6 +20,8 @@ enum
 {
   PROP_0,
   PROP_ENABLE_BLUR,
+  PROP_NIGHT_LIGHT,
+  PROP_NIGHT_LIGHT_TEMPERATURE,
   N_PROPERTIES
 };
 
@@ -28,6 +30,8 @@ struct _ShopnoQsSettings
   GObject  __parent__;
 
   gboolean enable_blur;
+  gboolean night_light;
+  guint    night_light_temperature;
 };
 
 static GParamSpec *properties[N_PROPERTIES];
@@ -48,6 +52,14 @@ shopno_qs_settings_get_property (GObject    *object,
     {
     case PROP_ENABLE_BLUR:
       g_value_set_boolean (value, self->enable_blur);
+      break;
+
+    case PROP_NIGHT_LIGHT:
+      g_value_set_boolean (value, self->night_light);
+      break;
+
+    case PROP_NIGHT_LIGHT_TEMPERATURE:
+      g_value_set_uint (value, self->night_light_temperature);
       break;
 
     default:
@@ -76,6 +88,22 @@ shopno_qs_settings_set_property (GObject      *object,
         }
       break;
 
+    case PROP_NIGHT_LIGHT:
+      if (self->night_light != g_value_get_boolean (value))
+        {
+          self->night_light = g_value_get_boolean (value);
+          g_object_notify_by_pspec (object, pspec);
+        }
+      break;
+
+    case PROP_NIGHT_LIGHT_TEMPERATURE:
+      if (self->night_light_temperature != g_value_get_uint (value))
+        {
+          self->night_light_temperature = g_value_get_uint (value);
+          g_object_notify_by_pspec (object, pspec);
+        }
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -96,6 +124,16 @@ shopno_qs_settings_class_init (ShopnoQsSettingsClass *klass)
     g_param_spec_boolean ("enable-blur", NULL, NULL, FALSE,
                           G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
+  properties[PROP_NIGHT_LIGHT] =
+    g_param_spec_boolean ("night-light", NULL, NULL, FALSE,
+                          G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
+
+  properties[PROP_NIGHT_LIGHT_TEMPERATURE] =
+    g_param_spec_uint ("night-light-temperature", NULL, NULL,
+                       SHOPNO_QS_NIGHT_LIGHT_MIN, SHOPNO_QS_NIGHT_LIGHT_MAX,
+                       SHOPNO_QS_NIGHT_LIGHT_DEFAULT,
+                       G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (gobject_class, N_PROPERTIES, properties);
 }
 
@@ -104,6 +142,7 @@ shopno_qs_settings_class_init (ShopnoQsSettingsClass *klass)
 static void
 shopno_qs_settings_init (ShopnoQsSettings *self)
 {
+  self->night_light_temperature = SHOPNO_QS_NIGHT_LIGHT_DEFAULT;
 }
 
 
@@ -122,4 +161,35 @@ shopno_qs_settings_get_enable_blur (ShopnoQsSettings *settings)
   g_return_val_if_fail (SHOPNO_IS_QS_SETTINGS (settings), FALSE);
 
   return settings->enable_blur;
+}
+
+
+
+gboolean
+shopno_qs_settings_get_night_light (ShopnoQsSettings *settings)
+{
+  g_return_val_if_fail (SHOPNO_IS_QS_SETTINGS (settings), FALSE);
+
+  return settings->night_light;
+}
+
+
+
+void
+shopno_qs_settings_set_night_light (ShopnoQsSettings *settings,
+                                    gboolean          night_light)
+{
+  g_return_if_fail (SHOPNO_IS_QS_SETTINGS (settings));
+
+  g_object_set (settings, "night-light", night_light, NULL);
+}
+
+
+
+guint
+shopno_qs_settings_get_night_light_temperature (ShopnoQsSettings *settings)
+{
+  g_return_val_if_fail (SHOPNO_IS_QS_SETTINGS (settings), SHOPNO_QS_NIGHT_LIGHT_DEFAULT);
+
+  return settings->night_light_temperature;
 }

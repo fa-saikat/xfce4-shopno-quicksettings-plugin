@@ -19,12 +19,22 @@
 
 G_BEGIN_DECLS
 
+/* Night light color temperature in kelvin; 6500 K is neutral */
+#define SHOPNO_QS_NIGHT_LIGHT_MIN     1500
+#define SHOPNO_QS_NIGHT_LIGHT_MAX     6000
+#define SHOPNO_QS_NIGHT_LIGHT_DEFAULT 4000
+
 #define SHOPNO_TYPE_QS_SETTINGS (shopno_qs_settings_get_type ())
 G_DECLARE_FINAL_TYPE (ShopnoQsSettings, shopno_qs_settings, SHOPNO, QS_SETTINGS, GObject)
 
 ShopnoQsSettings *shopno_qs_settings_new             (void);
 
 gboolean          shopno_qs_settings_get_enable_blur (ShopnoQsSettings *settings);
+
+gboolean          shopno_qs_settings_get_night_light (ShopnoQsSettings *settings);
+void              shopno_qs_settings_set_night_light (ShopnoQsSettings *settings,
+                                                      gboolean          night_light);
+guint             shopno_qs_settings_get_night_light_temperature (ShopnoQsSettings *settings);
 
 G_END_DECLS
 
