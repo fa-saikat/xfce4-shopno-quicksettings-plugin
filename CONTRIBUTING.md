@@ -59,6 +59,19 @@ When in doubt, match the code around your change.
   short summary line and an optional body explaining why.
 - Include a screenshot for visual changes.
 
+## Releases
+
+Releases come only from `main`, through a pull request:
+
+1. Create a `release/<version>` branch from `main`.
+2. Set the version in `meson.build`, `packaging/debian/changelog`,
+   `packaging/rpm/xfce4-shopno-quicksettings-plugin.spec` and
+   `packaging/arch/PKGBUILD`, with the changes in the changelogs.
+3. Open a pull request into `main`. CI checks that all four versions match.
+4. Merge it. The Release workflow builds the packages from the merge commit
+   and attaches them to a draft release `v<version>`.
+5. Check the draft, then publish it, which creates the tag.
+
 ## Translations
 
 Translations use gettext. To add a language:
