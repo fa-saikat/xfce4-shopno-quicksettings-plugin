@@ -24,6 +24,9 @@
 /* Volume change per scroll step, as on Windows */
 #define SCROLL_STEP 0.02
 
+/* How long the volume notification stays, in milliseconds */
+#define VOLUME_NOTIFICATION_TIMEOUT 2000
+
 struct _ShopnoQsStatus
 {
   GtkBox           __parent__;
@@ -37,6 +40,10 @@ struct _ShopnoQsStatus
   GtkWidget       *battery_icon;
 
   gint             icon_size;
+
+  /* The volume notification, replaced on each scroll step */
+  GCancellable    *cancellable;
+  guint32          notification_id;
 };
 
 G_DEFINE_TYPE (ShopnoQsStatus, shopno_qs_status, GTK_TYPE_BOX)
@@ -85,10 +92,72 @@ shopno_qs_status_update_battery (ShopnoQsStatus *self)
 
 
 
+/*
+ * Volume notification, as xfce4-pulseaudio-plugin shows: xfce4-notifyd
+ * draws the "value" hint as a level bar
+ */
+
+static void
+shopno_qs_status_notified (GObject      *source,
+                           GAsyncResult *result,
+                           gpointer      data)
+{
+  GVariant *reply = g_dbus_connection_call_finish (G_DBUS_CONNECTION (source), result, NULL);
+
+  /* No notification server, or the status is gone */
+  if (reply == NULL)
+    return;
+
+  g_variant_get (reply, "(u)", &SHOPNO_QS_STATUS (data)->notification_id);
+  g_variant_unref (reply);
+}
+
+
+
+static void
+shopno_qs_status_notify_volume (ShopnoQsStatus *self,
+                                gdouble         volume)
+{
+  GDBusConnection *bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, NULL);
+  gboolean         muted = shopno_qs_audio_get_muted (self->audio);
+  gint             percent = (gint) (volume * 100.0 + 0.5);
+  GVariantBuilder  hints;
+  gchar           *summary;
+
+  if (bus == NULL)
+    return;
+
+  summary = muted ? g_strdup_printf (_("Volume %d%% (muted)"), percent)
+                  : g_strdup_printf (_("Volume %d%%"), percent);
+
+  g_variant_builder_init (&hints, G_VARIANT_TYPE_VARDICT);
+  g_variant_builder_add (&hints, "{sv}", "value", g_variant_new_int32 (percent));
+  /* Replace, rather than stack, while replies are still on their way */
+  g_variant_builder_add (&hints, "{sv}", "x-canonical-private-synchronous", g_variant_new_string ("volume"));
+  /* Kept out of the notification log */
+  g_variant_builder_add (&hints, "{sv}", "transient", g_variant_new_boolean (TRUE));
+
+  g_dbus_connection_call (bus, "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                          "org.freedesktop.Notifications", "Notify",
+                          g_variant_new ("(susssasa{sv}i)", _("Quick Settings"), self->notification_id,
+                                         shopno_qs_audio_icon_name_for (percent / 100.0, muted),
+                                         summary, "", NULL, &hints, VOLUME_NOTIFICATION_TIMEOUT),
+                          G_VARIANT_TYPE ("(u)"), G_DBUS_CALL_FLAGS_NONE, -1,
+                          self->cancellable, shopno_qs_status_notified, self);
+
+  g_free (summary);
+  g_object_unref (bus);
+}
+
+
+
 static void
 shopno_qs_status_dispose (GObject *object)
 {
   ShopnoQsStatus *self = SHOPNO_QS_STATUS (object);
+
+  g_cancellable_cancel (self->cancellable);
+  g_clear_object (&self->cancellable);
 
   if (self->network != NULL)
     {
@@ -125,6 +194,7 @@ static void
 shopno_qs_status_init (ShopnoQsStatus *self)
 {
   self->icon_size = 16;
+  self->cancellable = g_cancellable_new ();
   gtk_box_set_spacing (GTK_BOX (self), 8);
   gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (self)), "shopno-qs-status");
 
@@ -206,8 +276,12 @@ shopno_qs_status_scroll (ShopnoQsStatus *status,
     }
 
   if (steps != 0)
-    shopno_qs_audio_set_volume (status->audio,
-                                shopno_qs_audio_get_volume (status->audio) + steps * SCROLL_STEP);
+    {
+      gdouble volume = CLAMP (shopno_qs_audio_get_volume (status->audio) + steps * SCROLL_STEP, 0.0, 1.0);
+
+      shopno_qs_audio_set_volume (status->audio, volume);
+      shopno_qs_status_notify_volume (status, volume);
+    }
 
   return TRUE;
 }

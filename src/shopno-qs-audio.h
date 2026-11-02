@@ -52,6 +52,10 @@ void           shopno_qs_audio_set_default_sink (ShopnoQsAudio *audio,
 /* An icon name for the current volume and mute state */
 const gchar   *shopno_qs_audio_get_icon_name    (ShopnoQsAudio *audio);
 
+/* The same for a given volume, 0.0 to 1.0 */
+const gchar   *shopno_qs_audio_icon_name_for    (gdouble        volume,
+                                                 gboolean       muted);
+
 G_END_DECLS
 
 #endif /* !__SHOPNO_QS_AUDIO_H__ */

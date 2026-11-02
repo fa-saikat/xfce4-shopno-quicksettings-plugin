@@ -500,13 +500,19 @@ shopno_qs_audio_set_default_sink (ShopnoQsAudio *audio,
 const gchar *
 shopno_qs_audio_get_icon_name (ShopnoQsAudio *audio)
 {
-  gdouble volume;
-
   g_return_val_if_fail (SHOPNO_IS_QS_AUDIO (audio), NULL);
 
-  volume = shopno_qs_audio_get_volume (audio);
+  return shopno_qs_audio_icon_name_for (shopno_qs_audio_get_volume (audio),
+                                        !audio->available || audio->muted);
+}
 
-  if (!audio->available || audio->muted || volume <= 0.0)
+
+
+const gchar *
+shopno_qs_audio_icon_name_for (gdouble  volume,
+                               gboolean muted)
+{
+  if (muted || volume <= 0.0)
     return "audio-volume-muted-symbolic";
   if (volume < 0.34)
     return "audio-volume-low-symbolic";
