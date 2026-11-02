@@ -15,6 +15,7 @@ shopno_qs_deps = [
   libpulse,
   libpulse_glib,
   libnm,
+  dbusmenu,
   x11,
   xrandr,
   libm,

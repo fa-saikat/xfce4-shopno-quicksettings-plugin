@@ -139,6 +139,26 @@ shopno_qs_tray_icon_update (ShopnoQsTrayIcon *self)
  * Input
  */
 
+/* The app's own menu, at the pointer as on Windows; apps without one are
+ * asked to show theirs */
+static void
+shopno_qs_tray_icon_show_menu (ShopnoQsTrayIcon *self,
+                               GdkEventButton   *event)
+{
+  GtkWidget *menu = shopno_qs_tray_item_get_menu (self->item);
+
+  if (menu == NULL)
+    {
+      shopno_qs_tray_item_context_menu (self->item, (gint) event->x_root, (gint) event->y_root);
+      return;
+    }
+
+  gtk_menu_set_screen (GTK_MENU (menu), gtk_widget_get_screen (GTK_WIDGET (self)));
+  gtk_menu_popup_at_pointer (GTK_MENU (menu), (GdkEvent *) event);
+}
+
+
+
 static gboolean
 shopno_qs_tray_icon_button_release_event (GtkWidget      *widget,
                                           GdkEventButton *event)
@@ -159,7 +179,7 @@ shopno_qs_tray_icon_button_release_event (GtkWidget      *widget,
     case 1:
       /* Some apps only have a menu */
       if (shopno_qs_tray_item_get_is_menu (self->item))
-        shopno_qs_tray_item_context_menu (self->item, x, y);
+        shopno_qs_tray_icon_show_menu (self, event);
       else
         shopno_qs_tray_item_activate (self->item, x, y);
       break;
@@ -169,7 +189,7 @@ shopno_qs_tray_icon_button_release_event (GtkWidget      *widget,
       break;
 
     case 3:
-      shopno_qs_tray_item_context_menu (self->item, x, y);
+      shopno_qs_tray_icon_show_menu (self, event);
       break;
 
     default:
