@@ -31,7 +31,6 @@ struct _ShopnoQsTrayIcon
   ShopnoQsTrayItem *item;
   GtkWidget        *image;
   gint              icon_size;
-  gdouble           smooth_delta;
 };
 
 G_DEFINE_TYPE (ShopnoQsTrayIcon, shopno_qs_tray_icon, GTK_TYPE_BUTTON)
@@ -218,8 +217,6 @@ shopno_qs_tray_icon_scroll_event (GtkWidget      *widget,
                                   GdkEventScroll *event)
 {
   ShopnoQsTrayIcon *self = SHOPNO_QS_TRAY_ICON (widget);
-  gdouble           dx, dy;
-  gint              steps;
 
   switch (event->direction)
     {
@@ -237,16 +234,6 @@ shopno_qs_tray_icon_scroll_event (GtkWidget      *widget,
 
     case GDK_SCROLL_RIGHT:
       shopno_qs_tray_item_scroll (self->item, 1, GTK_ORIENTATION_HORIZONTAL);
-      break;
-
-    case GDK_SCROLL_SMOOTH:
-      /* Touchpads: one step per unit of scrolling */
-      gdk_event_get_scroll_deltas ((GdkEvent *) event, &dx, &dy);
-      self->smooth_delta += dy;
-      steps = (gint) self->smooth_delta;
-      self->smooth_delta -= steps;
-      if (steps != 0)
-        shopno_qs_tray_item_scroll (self->item, steps, GTK_ORIENTATION_VERTICAL);
       break;
 
     default:
@@ -319,7 +306,9 @@ shopno_qs_tray_icon_init (ShopnoQsTrayIcon *self)
 
   gtk_button_set_relief (GTK_BUTTON (self), GTK_RELIEF_NONE);
   gtk_widget_set_focus_on_click (GTK_WIDGET (self), FALSE);
-  gtk_widget_add_events (GTK_WIDGET (self), GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
+  /* Not smooth scrolling: on the panel, each wheel step comes wrapped in a
+   * leave and enter, after which GTK reports a smooth step as no movement */
+  gtk_widget_add_events (GTK_WIDGET (self), GDK_SCROLL_MASK);
   gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (self)), "shopno-qs-tray-icon");
 
   self->image = gtk_image_new ();

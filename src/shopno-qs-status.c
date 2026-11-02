@@ -37,7 +37,6 @@ struct _ShopnoQsStatus
   GtkWidget       *battery_icon;
 
   gint             icon_size;
-  gdouble          smooth_delta;
 };
 
 G_DEFINE_TYPE (ShopnoQsStatus, shopno_qs_status, GTK_TYPE_BOX)
@@ -183,8 +182,7 @@ gboolean
 shopno_qs_status_scroll (ShopnoQsStatus *status,
                          GdkEventScroll *event)
 {
-  gdouble dx, dy;
-  gint    steps = 0;
+  gint steps = 0;
 
   g_return_val_if_fail (SHOPNO_IS_QS_STATUS (status), FALSE);
 
@@ -201,14 +199,6 @@ shopno_qs_status_scroll (ShopnoQsStatus *status,
     case GDK_SCROLL_DOWN:
     case GDK_SCROLL_LEFT:
       steps = -1;
-      break;
-
-    case GDK_SCROLL_SMOOTH:
-      /* Touchpads: one step per unit of scrolling */
-      gdk_event_get_scroll_deltas ((GdkEvent *) event, &dx, &dy);
-      status->smooth_delta -= dy;
-      steps = (gint) status->smooth_delta;
-      status->smooth_delta -= steps;
       break;
 
     default:

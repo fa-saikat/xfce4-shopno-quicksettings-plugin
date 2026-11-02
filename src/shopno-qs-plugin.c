@@ -580,7 +580,9 @@ shopno_qs_plugin_init (ShopnoQsPlugin *self)
   gtk_widget_set_has_tooltip (self->button, TRUE);
   g_signal_connect (self->button, "query-tooltip",
                     G_CALLBACK (shopno_qs_plugin_query_tooltip), self);
-  gtk_widget_add_events (self->button, GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
+  /* Not smooth scrolling: the panel wraps each wheel step in a leave and
+   * enter, after which GTK reports a smooth step as no movement */
+  gtk_widget_add_events (self->button, GDK_SCROLL_MASK);
   g_signal_connect (self->button, "scroll-event",
                     G_CALLBACK (shopno_qs_plugin_scroll_event), self);
   g_signal_connect (self->button, "button-press-event",
