@@ -456,20 +456,17 @@ static const GDBusInterfaceVTable watcher_vtable =
 
 
 
+/* Export the watcher before asking for its name: apps call it as soon
+ * as the name appears, and a call that arrives before the object exists
+ * is lost */
 static void
-shopno_qs_tray_watcher_acquired (GDBusConnection *connection,
-                                 const gchar     *name,
-                                 gpointer         data)
+shopno_qs_tray_export_watcher (ShopnoQsTray *self)
 {
-  ShopnoQsTray  *self = data;
   GDBusNodeInfo *info;
   GError        *error = NULL;
 
-  if (self->watcher_object_id != 0)
-    return;
-
   info = g_dbus_node_info_new_for_xml (watcher_xml, NULL);
-  self->watcher_object_id = g_dbus_connection_register_object (connection, WATCHER_PATH,
+  self->watcher_object_id = g_dbus_connection_register_object (self->bus, WATCHER_PATH,
                                                                info->interfaces[0], &watcher_vtable,
                                                                self, NULL, &error);
   g_dbus_node_info_unref (info);
@@ -490,14 +487,9 @@ shopno_qs_tray_watcher_lost (GDBusConnection *connection,
 {
   ShopnoQsTray *self = data;
 
-  /* Another program runs the watcher; this tray stays a host of it */
+  /* Another program runs the watcher; this tray stays a host of it.
+   * The object stays exported, unused, in case the name comes back. */
   g_hash_table_remove_all (self->watched);
-
-  if (self->watcher_object_id != 0)
-    {
-      g_dbus_connection_unregister_object (self->bus, self->watcher_object_id);
-      self->watcher_object_id = 0;
-    }
 }
 
 
@@ -535,6 +527,12 @@ shopno_qs_tray_dispose (GObject *object)
     {
       shopno_qs_tray_watcher_lost (self->bus, NULL, self);
       shopno_qs_tray_watcher_vanished (self->bus, NULL, self);
+
+      if (self->watcher_object_id != 0)
+        {
+          g_dbus_connection_unregister_object (self->bus, self->watcher_object_id);
+          self->watcher_object_id = 0;
+        }
     }
 
   g_clear_object (&self->bus);
@@ -592,10 +590,10 @@ shopno_qs_tray_init (ShopnoQsTray *self)
     return;
 
   /* Run the watcher unless another program already does */
+  shopno_qs_tray_export_watcher (self);
   self->watcher_owner_id = g_bus_own_name_on_connection (self->bus, WATCHER_NAME,
                                                          G_BUS_NAME_OWNER_FLAGS_NONE,
-                                                         shopno_qs_tray_watcher_acquired,
-                                                         shopno_qs_tray_watcher_lost,
+                                                         NULL, shopno_qs_tray_watcher_lost,
                                                          self, NULL);
 
   self->host_name = g_strdup_printf ("org.kde.StatusNotifierHost-%d-%u", (gint) getpid (), ++counter);
