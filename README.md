@@ -7,9 +7,10 @@
   <a href="COPYING"><img alt="License: GPL-2.0-or-later" src="https://img.shields.io/badge/license-GPL--2.0+-6b7280?style=for-the-badge&labelColor=2b2b33"></a>
 </p>
 
-A Windows 11-style quick settings flyout for the Xfce panel: Wi-Fi,
-Bluetooth, Do not disturb, Night light, brightness, volume and battery in one
-place, behind one set of icons on the panel.
+A Windows 11-style quick settings flyout and system tray for the Xfce panel:
+Wi-Fi, Bluetooth, Do not disturb, Night light, brightness, volume and battery
+in one place, behind one set of icons on the panel, with other apps' tray
+icons next to them.
 
 <a href="#features">Features</a> ·
 <a href="#requirements">Requirements</a> ·
@@ -36,6 +37,13 @@ Xfce under a free license, so I made it.
 **Panel button.** Network, volume and battery icons, like the Windows 11
 taskbar. Scroll on it to change the volume; hover for a summary.
 
+**System tray.** Tray icons of other apps, such as ibus, qBittorrent or
+Telegram, sit left of the panel button, so Xfce's System Tray plugin is not
+needed. Click an icon to open the app, middle-click for its second action,
+right-click for its menu, scroll to scroll it. As on Windows 11, new apps
+wait behind a **^** button that opens a small flyout of hidden icons;
+choose which apps show on the panel in Properties.
+
 **Tiles**, three to a row. Split tiles have a chevron that opens a page.
 
 - **Wi-Fi**: turns the radio on or off and shows the network you are
@@ -53,8 +61,8 @@ taskbar. Scroll on it to change the volume; hover for a summary.
 
 **Footer.** Battery level and time remaining, and a button for all settings.
 
-**Properties.** Choose which tiles to show, the Night light color
-temperature, and background blur.
+**Properties.** Choose which tiles to show, which tray icons show on the
+panel, the Night light color temperature, and background blur.
 
 ## Requirements
 
@@ -70,15 +78,21 @@ missing is greyed out with a tooltip saying why.
 | Battery         | UPower                                                             |
 | Do not disturb  | xfce4-notifyd                                                      |
 | Night light     | An X11 session with XRandR                                         |
+| Tray icons      | Apps that use StatusNotifierItem (KDE/AppIndicator tray icons)     |
 
 The **More … settings** links open nm-connection-editor, blueman-manager,
 pavucontrol, xfce4-power-manager-settings and xfce4-settings-manager when
 they are installed.
 
-Remove nm-applet, the Blueman applet and the PulseAudio and power manager
-plugins from the panel to avoid duplicate icons. There is one thing they
-still do: pairing a new Bluetooth device needs **More Bluetooth settings**
-(Blueman) for now.
+Remove Xfce's **System Tray** plugin from the panel: Shopno Quick Settings
+shows tray icons itself, and with both, icons would show twice. Properties
+warns when another tray is running.
+
+Stop nm-applet and the Blueman applet from starting (**Settings > Session
+and Startup > Application Autostart**), and remove the PulseAudio and power
+manager plugins, to avoid duplicate icons. There is one thing they still do:
+pairing a new Bluetooth device needs **More Bluetooth settings** (Blueman)
+for now.
 
 ## Installing
 
@@ -110,6 +124,7 @@ Dependencies:
 | libnm                                            | 1.24            |
 | libpulse, libpulse-mainloop-glib                 | 15.0            |
 | libX11, libXrandr                                | any, RandR 1.2  |
+| libdbusmenu-gtk3                                 | 16.04           |
 
 You also need `meson`, `ninja`, a C compiler, and `gettext`.
 
@@ -118,7 +133,7 @@ You also need `meson`, `ninja`, a C compiler, and `gettext`.
 ```sh
 sudo apt install build-essential meson ninja-build gettext pkg-config \
   libgtk-3-dev libxfce4panel-2.0-dev libxfce4ui-2-dev libxfce4util-dev libxfconf-0-dev \
-  libnm-dev libpulse-dev libx11-dev libxrandr-dev
+  libnm-dev libpulse-dev libx11-dev libxrandr-dev libdbusmenu-gtk3-dev
 ```
 
 **Fedora**
@@ -126,14 +141,15 @@ sudo apt install build-essential meson ninja-build gettext pkg-config \
 ```sh
 sudo dnf install gcc meson ninja-build gettext gtk3-devel \
   xfce4-panel-devel libxfce4ui-devel libxfce4util-devel xfconf-devel \
-  NetworkManager-libnm-devel pulseaudio-libs-devel libX11-devel libXrandr-devel
+  NetworkManager-libnm-devel pulseaudio-libs-devel libX11-devel libXrandr-devel \
+  libdbusmenu-gtk3-devel
 ```
 
 **Arch Linux**
 
 ```sh
 sudo pacman -S --needed base-devel meson gettext gtk3 xfce4-panel libxfce4ui libxfce4util xfconf \
-  libnm libpulse libx11 libxrandr
+  libnm libpulse libx11 libxrandr libdbusmenu-gtk3
 ```
 
 Build and install:
@@ -182,6 +198,11 @@ are in
   supported.
 - **Night light and redshift** both set the gamma ramps; use one of them.
 - **No tile editing in the flyout.** Choose tiles in Properties instead.
+- **No XEmbed tray icons yet.** A few older programs (some Wine, Java and
+  GTK 2 apps) use the older XEmbed tray instead of StatusNotifierItem; their
+  icons do not show yet ([#51](https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin/issues/51)).
+- **No dragging of tray icons.** Choose which show on the panel in
+  Properties.
 - **Borrowed icon.** It uses the ShopnoOS logo until it has one of its own.
 
 If one of these matters to you,
@@ -206,6 +227,10 @@ Shopno Quick Settings builds on:
   [PulseAudio](https://www.freedesktop.org/wiki/Software/PulseAudio/) and
   [PipeWire](https://pipewire.org/), [UPower](https://upower.freedesktop.org/),
   systemd-logind and xfce4-notifyd.
+- The system tray follows the StatusNotifierItem code of Xfce's
+  [systray plugin](https://gitlab.xfce.org/xfce/xfce4-panel/-/tree/master/plugins/systray)
+  by Viktor Odintsev (GPL-2.0-or-later), and uses
+  [libdbusmenu](https://launchpad.net/libdbusmenu) for apps' menus.
 - Projects it learned from: [network-manager-applet](https://gitlab.gnome.org/GNOME/network-manager-applet),
   [xfce4-pulseaudio-plugin](https://gitlab.xfce.org/panel-plugins/xfce4-pulseaudio-plugin),
   [xfce4-power-manager](https://gitlab.xfce.org/xfce/xfce4-power-manager) and

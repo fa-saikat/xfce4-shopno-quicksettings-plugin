@@ -290,6 +290,26 @@ shopno_qs_dialog_new (GtkWindow        *parent,
   gtk_grid_attach (GTK_GRID (grid), label, 0, row++, 2, 1);
   gtk_grid_attach (GTK_GRID (grid), shopno_qs_dialog_tray_apps_new (settings), 0, row++, 2, 1);
 
+  /* Two trays show the same icons twice */
+  {
+    ShopnoQsTray *tray = shopno_qs_tray_get_default ();
+
+    if (!shopno_qs_tray_get_owns_watcher (tray))
+      {
+        GtkWidget *warning = gtk_label_new (_("Another tray, such as Xfce's System Tray plugin, is running. "
+                                              "Remove it from the panel to avoid showing these icons twice."));
+
+        gtk_label_set_xalign (GTK_LABEL (warning), 0.0);
+        gtk_label_set_line_wrap (GTK_LABEL (warning), TRUE);
+        gtk_label_set_max_width_chars (GTK_LABEL (warning), 50);
+        gtk_widget_set_margin_start (warning, 12);
+        gtk_style_context_add_class (gtk_widget_get_style_context (warning), "warning");
+        gtk_grid_attach (GTK_GRID (grid), warning, 0, row++, 2, 1);
+      }
+
+    g_object_unref (tray);
+  }
+
   label = gtk_label_new (NULL);
   gtk_label_set_markup (GTK_LABEL (label),
                         _("<small>Other icons are behind the ^ button next to them.</small>"));
