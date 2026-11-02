@@ -29,8 +29,6 @@ ShopnoQsBattery *shopno_qs_battery_get_default    (void);
 gboolean         shopno_qs_battery_get_present    (ShopnoQsBattery *battery);
 gdouble          shopno_qs_battery_get_percentage (ShopnoQsBattery *battery);
 
-/* Plugged in: charging, full, or waiting to charge */
-gboolean         shopno_qs_battery_get_plugged_in (ShopnoQsBattery *battery);
 const gchar     *shopno_qs_battery_get_icon_name  (ShopnoQsBattery *battery);
 
 /* "2 hours 10 minutes remaining", "Fully charged", ...; free with g_free() */

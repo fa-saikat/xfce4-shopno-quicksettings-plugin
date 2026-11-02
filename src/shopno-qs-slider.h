@@ -32,7 +32,6 @@ void       shopno_qs_slider_set_icon_name (ShopnoQsSlider *slider,
 /* 0.0 to 1.0. Setting the value from code does not emit "value-changed". */
 void       shopno_qs_slider_set_value     (ShopnoQsSlider *slider,
                                            gdouble         value);
-gdouble    shopno_qs_slider_get_value     (ShopnoQsSlider *slider);
 
 /* While the user drags, values from the system are ignored so the knob
  * does not jump back */

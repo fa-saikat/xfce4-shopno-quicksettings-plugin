@@ -189,16 +189,6 @@ shopno_qs_tile_set_active (ShopnoQsTile *tile,
 
 
 
-gboolean
-shopno_qs_tile_get_active (ShopnoQsTile *tile)
-{
-  g_return_val_if_fail (SHOPNO_IS_QS_TILE (tile), FALSE);
-
-  return tile->active;
-}
-
-
-
 void
 shopno_qs_tile_set_available (ShopnoQsTile *tile,
                               gboolean      available,

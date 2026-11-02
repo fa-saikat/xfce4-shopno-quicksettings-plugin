@@ -26,7 +26,9 @@ G_DECLARE_FINAL_TYPE (ShopnoQsTrayIcon, shopno_qs_tray_icon, SHOPNO, QS_TRAY_ICO
 
 /* A tray app's icon: click to activate, middle click for its secondary
  * action, right click for its menu, scroll to scroll it. Emits
- * "activated" just before any click reaches the app. */
+ * "activated" just before any click reaches the app, or for the app's
+ * menu, once an item of it is chosen; "menu-dismissed" when that menu
+ * closes without a choice. */
 GtkWidget        *shopno_qs_tray_icon_new           (ShopnoQsTrayItem *item);
 
 ShopnoQsTrayItem *shopno_qs_tray_icon_get_item      (ShopnoQsTrayIcon *icon);
