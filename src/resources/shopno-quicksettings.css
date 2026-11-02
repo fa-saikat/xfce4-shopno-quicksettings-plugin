@@ -305,3 +305,10 @@ window:not(.composited) .shopno-qs-footer {
 .shopno-qs-row-message {
   font-size: 0.9em;
 }
+
+/* Tray icons of other apps on the panel */
+
+.shopno-qs-tray-icon {
+  padding: 2px 4px;
+  border-radius: 3px;
+}
