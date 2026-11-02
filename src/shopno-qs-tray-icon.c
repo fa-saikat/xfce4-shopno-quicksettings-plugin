@@ -16,6 +16,14 @@
 
 #include "shopno-qs-tray-icon.h"
 
+enum
+{
+  ACTIVATED,
+  N_SIGNALS
+};
+
+static guint signals[N_SIGNALS];
+
 struct _ShopnoQsTrayIcon
 {
   GtkButton         __parent__;
@@ -106,8 +114,6 @@ shopno_qs_tray_icon_update (ShopnoQsTrayIcon *self)
   cairo_surface_t *surface;
   gchar           *tooltip;
 
-  gtk_widget_set_visible (GTK_WIDGET (self), shopno_qs_tray_item_get_visible (self->item));
-
   pixbuf = shopno_qs_tray_icon_load (self, scale);
   if (pixbuf != NULL)
     {
@@ -142,6 +148,11 @@ shopno_qs_tray_icon_button_release_event (GtkWidget      *widget,
   gint              y = (gint) event->y_root;
 
   GTK_WIDGET_CLASS (shopno_qs_tray_icon_parent_class)->button_release_event (widget, event);
+
+  /* Before the app acts, so a popup holding the input can close and the
+   * app's own menu can take it */
+  if (event->button >= 1 && event->button <= 3)
+    g_signal_emit (self, signals[ACTIVATED], 0);
 
   switch (event->button)
     {
@@ -273,6 +284,10 @@ shopno_qs_tray_icon_class_init (ShopnoQsTrayIconClass *klass)
   widget_class->button_release_event = shopno_qs_tray_icon_button_release_event;
   widget_class->scroll_event = shopno_qs_tray_icon_scroll_event;
   widget_class->style_updated = shopno_qs_tray_icon_style_updated;
+
+  signals[ACTIVATED] =
+    g_signal_new ("activated", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
+                  0, NULL, NULL, NULL, G_TYPE_NONE, 0);
 }
 
 

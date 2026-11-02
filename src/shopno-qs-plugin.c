@@ -22,6 +22,7 @@
 #include "shopno-qs-dialog.h"
 #include "shopno-qs-settings.h"
 #include "shopno-qs-status.h"
+#include "shopno-qs-overflow.h"
 #include "shopno-qs-tray-box.h"
 #include "shopno-qs-window.h"
 
@@ -52,6 +53,9 @@ struct _ShopnoQsPlugin
   GtkWidget        *status;
   GtkWidget        *box;
   GtkWidget        *tray;
+  GtkWidget        *overflow_button;
+  GtkWidget        *overflow_arrow;
+  GtkWidget        *overflow;
   GtkWidget        *window;
 };
 
@@ -150,6 +154,9 @@ shopno_qs_plugin_load_settings (ShopnoQsPlugin *self)
 
   shopno_qs_plugin_load_list (self, "hidden-tiles");
   g_signal_connect (self->settings, "notify::hidden-tiles",
+                    G_CALLBACK (shopno_qs_plugin_save_list), self);
+  shopno_qs_plugin_load_list (self, "tray-pinned");
+  g_signal_connect (self->settings, "notify::tray-pinned",
                     G_CALLBACK (shopno_qs_plugin_save_list), self);
 }
 
@@ -346,6 +353,103 @@ shopno_qs_plugin_query_tooltip (GtkWidget      *button,
 
 
 /*
+ * Tray overflow
+ */
+
+/* The ^ points away from the panel edge, towards where the flyout opens */
+static void
+shopno_qs_plugin_update_arrow (ShopnoQsPlugin *self)
+{
+  const gchar *icon_name;
+
+  switch (xfce_panel_plugin_arrow_type (XFCE_PANEL_PLUGIN (self)))
+    {
+    case GTK_ARROW_DOWN:
+      icon_name = "pan-down-symbolic";
+      break;
+
+    case GTK_ARROW_LEFT:
+      icon_name = "pan-start-symbolic";
+      break;
+
+    case GTK_ARROW_RIGHT:
+      icon_name = "pan-end-symbolic";
+      break;
+
+    default:
+      icon_name = "pan-up-symbolic";
+      break;
+    }
+
+  gtk_image_set_from_icon_name (GTK_IMAGE (self->overflow_arrow), icon_name, GTK_ICON_SIZE_MENU);
+}
+
+
+
+static void
+shopno_qs_plugin_overflow_changed (ShopnoQsPlugin *self)
+{
+  gtk_widget_set_visible (self->overflow_button,
+                          shopno_qs_overflow_get_n_icons (SHOPNO_QS_OVERFLOW (self->overflow)) > 0);
+}
+
+
+
+static void
+shopno_qs_plugin_overflow_hidden (ShopnoQsPlugin *self)
+{
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (self->overflow_button), FALSE);
+  xfce_panel_plugin_block_autohide (XFCE_PANEL_PLUGIN (self), FALSE);
+}
+
+
+
+static void
+shopno_qs_plugin_overflow_toggled (ShopnoQsPlugin *self)
+{
+  gint x, y;
+
+  if (!gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (self->overflow_button)))
+    {
+      gtk_widget_hide (self->overflow);
+      return;
+    }
+
+  if (gtk_widget_get_visible (self->overflow))
+    return;
+
+  gtk_window_set_screen (GTK_WINDOW (self->overflow), gtk_widget_get_screen (self->overflow_button));
+  xfce_panel_plugin_block_autohide (XFCE_PANEL_PLUGIN (self), TRUE);
+  xfce_panel_plugin_position_widget (XFCE_PANEL_PLUGIN (self), self->overflow, self->overflow_button, &x, &y);
+
+  switch (xfce_panel_plugin_arrow_type (XFCE_PANEL_PLUGIN (self)))
+    {
+    case GTK_ARROW_UP:
+      y -= POPUP_GAP;
+      break;
+
+    case GTK_ARROW_DOWN:
+      y += POPUP_GAP;
+      break;
+
+    case GTK_ARROW_LEFT:
+      x -= POPUP_GAP;
+      break;
+
+    case GTK_ARROW_RIGHT:
+      x += POPUP_GAP;
+      break;
+
+    default:
+      break;
+    }
+
+  shopno_qs_overflow_popup (SHOPNO_QS_OVERFLOW (self->overflow), x, y);
+}
+
+
+
+/*
  * XfcePanelPlugin
  */
 
@@ -379,6 +483,9 @@ shopno_qs_plugin_free_data (XfcePanelPlugin *plugin)
   if (self->window != NULL)
     gtk_widget_destroy (self->window);
 
+  g_signal_handlers_disconnect_by_data (self->overflow, self);
+  gtk_widget_destroy (self->overflow);
+
   g_signal_handlers_disconnect_by_data (self->settings, self);
   if (self->channel != NULL)
     {
@@ -408,6 +515,7 @@ shopno_qs_plugin_size_changed (XfcePanelPlugin *plugin,
   gtk_orientable_set_orientation (GTK_ORIENTABLE (self->status), orientation);
   gtk_orientable_set_orientation (GTK_ORIENTABLE (self->box), orientation);
   gtk_orientable_set_orientation (GTK_ORIENTABLE (self->tray), orientation);
+  shopno_qs_plugin_update_arrow (self);
   shopno_qs_tray_box_set_icon_size (SHOPNO_QS_TRAY_BOX (self->tray), xfce_panel_plugin_get_icon_size (plugin));
   shopno_qs_status_set_icon_size (SHOPNO_QS_STATUS (self->status), xfce_panel_plugin_get_icon_size (plugin));
 
@@ -484,8 +592,24 @@ shopno_qs_plugin_init (ShopnoQsPlugin *self)
   self->box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
   gtk_container_add (GTK_CONTAINER (self), self->box);
 
-  self->tray = shopno_qs_tray_box_new ();
+  /* ^ opens the tray icons that are not pinned to the panel */
+  self->overflow_button = xfce_panel_create_toggle_button ();
+  gtk_widget_set_tooltip_text (self->overflow_button, _("Show hidden icons"));
+  gtk_style_context_add_class (gtk_widget_get_style_context (self->overflow_button), "shopno-qs-overflow-button");
+  g_signal_connect_swapped (self->overflow_button, "toggled",
+                            G_CALLBACK (shopno_qs_plugin_overflow_toggled), self);
+  self->overflow_arrow = gtk_image_new_from_icon_name ("pan-up-symbolic", GTK_ICON_SIZE_MENU);
+  gtk_container_add (GTK_CONTAINER (self->overflow_button), self->overflow_arrow);
+  gtk_box_pack_start (GTK_BOX (self->box), self->overflow_button, FALSE, FALSE, 0);
+
+  self->tray = shopno_qs_tray_box_new (self->settings, TRUE);
   gtk_box_pack_start (GTK_BOX (self->box), self->tray, FALSE, FALSE, 0);
+
+  self->overflow = shopno_qs_overflow_new (self->settings);
+  g_signal_connect_swapped (self->overflow, "changed",
+                            G_CALLBACK (shopno_qs_plugin_overflow_changed), self);
+  g_signal_connect_swapped (self->overflow, "hide",
+                            G_CALLBACK (shopno_qs_plugin_overflow_hidden), self);
   gtk_box_pack_start (GTK_BOX (self->box), self->button, FALSE, FALSE, 0);
 
   /* Network, volume and battery, like the Windows 11 taskbar */
@@ -493,4 +617,6 @@ shopno_qs_plugin_init (ShopnoQsPlugin *self)
   gtk_container_add (GTK_CONTAINER (self->button), self->status);
 
   gtk_widget_show_all (self->box);
+  gtk_widget_set_no_show_all (self->overflow_button, TRUE);
+  shopno_qs_plugin_overflow_changed (self);
 }

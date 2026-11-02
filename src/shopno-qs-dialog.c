@@ -19,12 +19,14 @@
 
 #include "shopno-qs-dialog.h"
 #include "shopno-qs-features.h"
+#include "shopno-qs-tray.h"
 
 #define BINDING_FLAGS (G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE)
 
 #define BLUR_GUIDE_URL "https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin#background-blur"
 
 #define TILE_KEY "shopno-qs-tile-id"
+#define TRAY_KEY "shopno-qs-tray-id"
 
 static const struct
 {
@@ -47,6 +49,145 @@ shopno_qs_dialog_tile_toggled (GtkToggleButton  *check,
 {
   shopno_qs_settings_set_tile_hidden (settings, g_object_get_data (G_OBJECT (check), TILE_KEY),
                                       !gtk_toggle_button_get_active (check));
+}
+
+
+
+static void
+shopno_qs_dialog_tray_toggled (GtkToggleButton  *check,
+                               ShopnoQsSettings *settings)
+{
+  shopno_qs_settings_set_tray_pinned (settings, g_object_get_data (G_OBJECT (check), TRAY_KEY),
+                                      gtk_toggle_button_get_active (check));
+}
+
+
+
+/* One "Show on the panel" box per tray app: the running ones, and the
+ * pinned ones that are not running, so a pin can still be undone */
+static void
+shopno_qs_dialog_fill_tray_apps (GtkWidget *list)
+{
+  ShopnoQsSettings *settings = g_object_get_data (G_OBJECT (list), "settings");
+  ShopnoQsTray     *tray = g_object_get_data (G_OBJECT (list), "tray");
+  GPtrArray        *items = shopno_qs_tray_get_items (tray);
+  GHashTable       *titles = g_hash_table_new (g_str_hash, g_str_equal);
+  gchar           **pinned;
+  GList            *ids;
+  GList            *children;
+
+  children = gtk_container_get_children (GTK_CONTAINER (list));
+  g_list_free_full (children, (GDestroyNotify) gtk_widget_destroy);
+
+  for (guint i = 0; i < items->len; i++)
+    {
+      ShopnoQsTrayItem *item = g_ptr_array_index (items, i);
+      const gchar      *id = shopno_qs_tray_item_get_id (item);
+
+      if (id != NULL)
+        g_hash_table_insert (titles, (gpointer) id, (gpointer) shopno_qs_tray_item_get_title (item));
+    }
+
+  g_object_get (settings, "tray-pinned", &pinned, NULL);
+  for (guint i = 0; pinned[i] != NULL; i++)
+    if (!g_hash_table_contains (titles, pinned[i]))
+      g_hash_table_insert (titles, pinned[i], pinned[i]);
+
+  ids = g_list_sort (g_hash_table_get_keys (titles), (GCompareFunc) g_utf8_collate);
+  for (GList *l = ids; l != NULL; l = l->next)
+    {
+      const gchar *title = g_hash_table_lookup (titles, l->data);
+      GtkWidget   *check = gtk_check_button_new_with_label (title != NULL ? title : l->data);
+
+      gtk_widget_set_tooltip_text (check, l->data);
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (check),
+                                    shopno_qs_settings_is_tray_pinned (settings, l->data));
+      g_object_set_data_full (G_OBJECT (check), TRAY_KEY, g_strdup (l->data), g_free);
+      g_signal_connect (check, "toggled", G_CALLBACK (shopno_qs_dialog_tray_toggled), settings);
+      gtk_box_pack_start (GTK_BOX (list), check, FALSE, FALSE, 0);
+    }
+
+  if (ids == NULL)
+    {
+      GtkWidget *label = gtk_label_new (_("No apps are showing tray icons right now."));
+
+      gtk_label_set_xalign (GTK_LABEL (label), 0.0);
+      gtk_style_context_add_class (gtk_widget_get_style_context (label), "dim-label");
+      gtk_box_pack_start (GTK_BOX (list), label, FALSE, FALSE, 0);
+    }
+
+  gtk_widget_show_all (list);
+
+  g_list_free (ids);
+  g_strfreev (pinned);
+  g_hash_table_destroy (titles);
+}
+
+
+
+static gboolean
+shopno_qs_dialog_refill_idle (gpointer data)
+{
+  g_object_set_data (data, "refill-id", NULL);
+
+  /* Not if the dialog closed meanwhile */
+  if (gtk_widget_get_parent (data) != NULL)
+    shopno_qs_dialog_fill_tray_apps (data);
+
+  return G_SOURCE_REMOVE;
+}
+
+
+
+/* Apps come, go, and send their names a little after appearing */
+static void
+shopno_qs_dialog_tray_changed (GtkWidget *list)
+{
+  guint id;
+
+  if (g_object_get_data (G_OBJECT (list), "refill-id") != NULL)
+    return;
+
+  id = g_idle_add_full (G_PRIORITY_DEFAULT_IDLE, shopno_qs_dialog_refill_idle,
+                        g_object_ref (list), g_object_unref);
+  g_object_set_data (G_OBJECT (list), "refill-id", GUINT_TO_POINTER (id));
+}
+
+
+
+static void
+shopno_qs_dialog_tray_item_added (GtkWidget        *list,
+                                  ShopnoQsTrayItem *item)
+{
+  g_signal_connect_object (item, "changed", G_CALLBACK (shopno_qs_dialog_tray_changed),
+                           list, G_CONNECT_SWAPPED);
+  shopno_qs_dialog_tray_changed (list);
+}
+
+
+
+static GtkWidget *
+shopno_qs_dialog_tray_apps_new (ShopnoQsSettings *settings)
+{
+  GtkWidget    *list = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+  ShopnoQsTray *tray = shopno_qs_tray_get_default ();
+  GPtrArray    *items = shopno_qs_tray_get_items (tray);
+
+  gtk_widget_set_margin_start (list, 12);
+  g_object_set_data (G_OBJECT (list), "settings", settings);
+  g_object_set_data_full (G_OBJECT (list), "tray", tray, g_object_unref);
+
+  g_signal_connect_object (tray, "item-added", G_CALLBACK (shopno_qs_dialog_tray_item_added),
+                           list, G_CONNECT_SWAPPED);
+  g_signal_connect_object (tray, "item-removed", G_CALLBACK (shopno_qs_dialog_tray_changed),
+                           list, G_CONNECT_SWAPPED);
+  for (guint i = 0; i < items->len; i++)
+    g_signal_connect_object (g_ptr_array_index (items, i), "changed",
+                             G_CALLBACK (shopno_qs_dialog_tray_changed), list, G_CONNECT_SWAPPED);
+
+  shopno_qs_dialog_fill_tray_apps (list);
+
+  return list;
 }
 
 
@@ -142,6 +283,20 @@ shopno_qs_dialog_new (GtkWindow        *parent,
   gtk_label_set_mnemonic_widget (GTK_LABEL (label), scale);
   g_object_bind_property (settings, "night-light-temperature", adjustment, "value", BINDING_FLAGS);
   gtk_grid_attach (GTK_GRID (grid), scale, 1, row++, 1, 1);
+
+  /* Tray icons: the others wait behind ^, as on Windows 11 */
+  label = shopno_qs_dialog_heading_new (_("Tray icons shown on the panel"));
+  gtk_widget_set_margin_top (label, 12);
+  gtk_grid_attach (GTK_GRID (grid), label, 0, row++, 2, 1);
+  gtk_grid_attach (GTK_GRID (grid), shopno_qs_dialog_tray_apps_new (settings), 0, row++, 2, 1);
+
+  label = gtk_label_new (NULL);
+  gtk_label_set_markup (GTK_LABEL (label),
+                        _("<small>Other icons are behind the ^ button next to them.</small>"));
+  gtk_label_set_xalign (GTK_LABEL (label), 0.0);
+  gtk_widget_set_margin_start (label, 12);
+  gtk_style_context_add_class (gtk_widget_get_style_context (label), "dim-label");
+  gtk_grid_attach (GTK_GRID (grid), label, 0, row++, 2, 1);
 
   /* Appearance */
   label = shopno_qs_dialog_heading_new (_("Appearance"));
