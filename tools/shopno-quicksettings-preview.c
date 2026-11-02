@@ -24,6 +24,7 @@
 
 #include "shopno-qs-dialog.h"
 #include "shopno-qs-status.h"
+#include "shopno-qs-tray-box.h"
 #include "shopno-qs-window.h"
 
 static gboolean opt_blur = FALSE;
@@ -38,7 +39,7 @@ static const GOptionEntry entries[] =
   { "no-grab", 0, 0, G_OPTION_ARG_NONE, &opt_no_grab, "Do not grab the keyboard and pointer", NULL },
   { "dialog", 0, 0, G_OPTION_ARG_NONE, &opt_dialog, "Also open the properties dialog", NULL },
   { "hide", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_hidden, "Hide a tile by id (repeatable)", "ID" },
-  { "status", 0, 0, G_OPTION_ARG_NONE, &opt_status, "Also show the panel button's status icons", NULL },
+  { "status", 0, 0, G_OPTION_ARG_NONE, &opt_status, "Also show the panel button's tray and status icons", NULL },
   { NULL }
 };
 
@@ -72,10 +73,14 @@ main (int    argc,
     {
       GtkWidget *status_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
       GtkWidget *status = shopno_qs_status_new ();
+      GtkWidget *box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
 
       gtk_window_set_title (GTK_WINDOW (status_window), "Status icons");
       gtk_container_set_border_width (GTK_CONTAINER (status_window), 8);
-      gtk_container_add (GTK_CONTAINER (status_window), status);
+      gtk_container_add (GTK_CONTAINER (status_window), box);
+      gtk_box_pack_start (GTK_BOX (box), shopno_qs_tray_box_new (), FALSE, FALSE, 0);
+      gtk_box_pack_start (GTK_BOX (box), status, FALSE, FALSE, 0);
+      gtk_widget_show_all (box);
       gtk_window_move (GTK_WINDOW (status_window), 520, 100);
       gtk_widget_add_events (status_window, GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
       g_signal_connect_swapped (status_window, "scroll-event",

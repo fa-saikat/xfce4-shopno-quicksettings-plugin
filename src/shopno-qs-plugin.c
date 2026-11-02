@@ -22,6 +22,7 @@
 #include "shopno-qs-dialog.h"
 #include "shopno-qs-settings.h"
 #include "shopno-qs-status.h"
+#include "shopno-qs-tray-box.h"
 #include "shopno-qs-window.h"
 
 /* Tile ids contain no ';', so the list is stored as one string. Xfconf
@@ -49,6 +50,8 @@ struct _ShopnoQsPlugin
 
   GtkWidget        *button;
   GtkWidget        *status;
+  GtkWidget        *box;
+  GtkWidget        *tray;
   GtkWidget        *window;
 };
 
@@ -403,6 +406,9 @@ shopno_qs_plugin_size_changed (XfcePanelPlugin *plugin,
     gtk_widget_set_size_request (GTK_WIDGET (plugin), size, -1);
 
   gtk_orientable_set_orientation (GTK_ORIENTABLE (self->status), orientation);
+  gtk_orientable_set_orientation (GTK_ORIENTABLE (self->box), orientation);
+  gtk_orientable_set_orientation (GTK_ORIENTABLE (self->tray), orientation);
+  shopno_qs_tray_box_set_icon_size (SHOPNO_QS_TRAY_BOX (self->tray), xfce_panel_plugin_get_icon_size (plugin));
   shopno_qs_status_set_icon_size (SHOPNO_QS_STATUS (self->status), xfce_panel_plugin_get_icon_size (plugin));
 
   return TRUE;
@@ -471,12 +477,20 @@ shopno_qs_plugin_init (ShopnoQsPlugin *self)
                     G_CALLBACK (shopno_qs_plugin_scroll_event), self);
   g_signal_connect (self->button, "button-press-event",
                     G_CALLBACK (shopno_qs_plugin_button_press_event), self);
-  gtk_container_add (GTK_CONTAINER (self), self->button);
   xfce_panel_plugin_add_action_widget (XFCE_PANEL_PLUGIN (self), self->button);
+
+  /* Tray icons of other apps, then the quick settings button, like the
+   * Windows 11 taskbar */
+  self->box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
+  gtk_container_add (GTK_CONTAINER (self), self->box);
+
+  self->tray = shopno_qs_tray_box_new ();
+  gtk_box_pack_start (GTK_BOX (self->box), self->tray, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (self->box), self->button, FALSE, FALSE, 0);
 
   /* Network, volume and battery, like the Windows 11 taskbar */
   self->status = shopno_qs_status_new ();
   gtk_container_add (GTK_CONTAINER (self->button), self->status);
 
-  gtk_widget_show_all (self->button);
+  gtk_widget_show_all (self->box);
 }
