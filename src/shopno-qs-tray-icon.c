@@ -36,6 +36,9 @@ struct _ShopnoQsTrayIcon
   GtkWidget        *image;
   gint              icon_size;
   gdouble           smooth_delta;
+
+  /* The item changed while the icon was off screen */
+  gboolean          stale;
 };
 
 G_DEFINE_TYPE (ShopnoQsTrayIcon, shopno_qs_tray_icon, GTK_TYPE_BUTTON)
@@ -135,6 +138,35 @@ shopno_qs_tray_icon_update (ShopnoQsTrayIcon *self)
   tooltip = shopno_qs_tray_item_get_tooltip (self->item);
   gtk_widget_set_tooltip_text (GTK_WIDGET (self), tooltip);
   g_free (tooltip);
+}
+
+
+
+/* Each app has an icon on the panel and one in the overflow flyout, and
+ * at most one of them is on screen; the other catches up when shown */
+static void
+shopno_qs_tray_icon_changed (ShopnoQsTrayIcon *self)
+{
+  if (gtk_widget_get_mapped (GTK_WIDGET (self)))
+    shopno_qs_tray_icon_update (self);
+  else
+    self->stale = TRUE;
+}
+
+
+
+static void
+shopno_qs_tray_icon_map (GtkWidget *widget)
+{
+  ShopnoQsTrayIcon *self = SHOPNO_QS_TRAY_ICON (widget);
+
+  GTK_WIDGET_CLASS (shopno_qs_tray_icon_parent_class)->map (widget);
+
+  if (self->stale)
+    {
+      self->stale = FALSE;
+      shopno_qs_tray_icon_update (self);
+    }
 }
 
 
@@ -327,7 +359,7 @@ shopno_qs_tray_icon_style_updated (GtkWidget *widget)
 
   /* Symbolic icons follow the text color of the theme */
   if (self->item != NULL)
-    shopno_qs_tray_icon_update (self);
+    shopno_qs_tray_icon_changed (self);
 }
 
 
@@ -356,6 +388,7 @@ shopno_qs_tray_icon_class_init (ShopnoQsTrayIconClass *klass)
 
   gobject_class->dispose = shopno_qs_tray_icon_dispose;
 
+  widget_class->map = shopno_qs_tray_icon_map;
   widget_class->button_press_event = shopno_qs_tray_icon_button_press_event;
   widget_class->button_release_event = shopno_qs_tray_icon_button_release_event;
   widget_class->scroll_event = shopno_qs_tray_icon_scroll_event;
@@ -395,7 +428,7 @@ shopno_qs_tray_icon_new (ShopnoQsTrayItem *item)
   ShopnoQsTrayIcon *self = g_object_new (SHOPNO_TYPE_QS_TRAY_ICON, NULL);
 
   self->item = g_object_ref (item);
-  g_signal_connect_swapped (item, "changed", G_CALLBACK (shopno_qs_tray_icon_update), self);
+  g_signal_connect_swapped (item, "changed", G_CALLBACK (shopno_qs_tray_icon_changed), self);
   shopno_qs_tray_icon_update (self);
 
   return GTK_WIDGET (self);
@@ -422,6 +455,7 @@ shopno_qs_tray_icon_set_icon_size (ShopnoQsTrayIcon *icon,
   if (icon->icon_size == size)
     return;
 
+  /* Now even off screen: the size is part of the size request */
   icon->icon_size = size;
   shopno_qs_tray_icon_update (icon);
 }

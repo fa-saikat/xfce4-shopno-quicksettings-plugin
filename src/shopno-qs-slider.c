@@ -208,16 +208,6 @@ shopno_qs_slider_set_value (ShopnoQsSlider *slider,
 
 
 
-gdouble
-shopno_qs_slider_get_value (ShopnoQsSlider *slider)
-{
-  g_return_val_if_fail (SHOPNO_IS_QS_SLIDER (slider), 0.0);
-
-  return gtk_range_get_value (GTK_RANGE (slider->scale));
-}
-
-
-
 gboolean
 shopno_qs_slider_is_dragging (ShopnoQsSlider *slider)
 {

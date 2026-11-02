@@ -505,16 +505,6 @@ shopno_qs_tray_item_get_tooltip (ShopnoQsTrayItem *item)
 
 
 const gchar *
-shopno_qs_tray_item_get_bus_name (ShopnoQsTrayItem *item)
-{
-  g_return_val_if_fail (SHOPNO_IS_QS_TRAY_ITEM (item), NULL);
-
-  return item->bus_name;
-}
-
-
-
-const gchar *
 shopno_qs_tray_item_get_menu_path (ShopnoQsTrayItem *item)
 {
   g_return_val_if_fail (SHOPNO_IS_QS_TRAY_ITEM (item), NULL);
