@@ -26,7 +26,9 @@ G_DECLARE_FINAL_TYPE (ShopnoQsTrayBox, shopno_qs_tray_box, SHOPNO, QS_TRAY_BOX, 
 
 /* Tray icons, in the order the apps appeared: those pinned to the panel,
  * or with pinned FALSE, the others, for the overflow flyout. Emits
- * "changed" when the number of shown icons may have changed. */
+ * "changed" when the number of shown icons may have changed, and passes
+ * on the icons' "activated" and "menu-dismissed" as "icon-activated" and
+ * "icon-menu-dismissed". */
 GtkWidget *shopno_qs_tray_box_new           (ShopnoQsSettings *settings,
                                              gboolean          pinned);
 
@@ -38,6 +40,10 @@ void       shopno_qs_tray_box_set_columns   (ShopnoQsTrayBox  *box,
                                              guint             columns);
 
 guint      shopno_qs_tray_box_get_n_shown   (ShopnoQsTrayBox  *box);
+
+/* Clears the hover and pressed looks, for when the box is hidden with the
+ * pointer over an icon */
+void       shopno_qs_tray_box_reset_icons   (ShopnoQsTrayBox  *box);
 
 G_END_DECLS
 

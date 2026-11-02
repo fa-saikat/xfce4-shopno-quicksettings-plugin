@@ -25,6 +25,7 @@ enum
 {
   CHANGED,
   ICON_ACTIVATED,
+  ICON_MENU_DISMISSED,
   N_SIGNALS
 };
 
@@ -74,10 +75,16 @@ shopno_qs_tray_box_update (ShopnoQsTrayBox *self)
   g_list_free (children);
 
   /* A flow box asks for room for its widest row, so a grid of few icons
-   * would be wide and mostly empty */
+   * would be wide and mostly empty. Its minimum size is measured at the
+   * fewest columns allowed, and the panel places the flyout from that
+   * size, so both ends are the same. */
   if (self->columns > 0)
-    gtk_flow_box_set_max_children_per_line (GTK_FLOW_BOX (self),
-                                            CLAMP (shopno_qs_tray_box_get_n_shown (self), 1, self->columns));
+    {
+      guint columns = CLAMP (shopno_qs_tray_box_get_n_shown (self), 1, self->columns);
+
+      gtk_flow_box_set_max_children_per_line (GTK_FLOW_BOX (self), columns);
+      gtk_flow_box_set_min_children_per_line (GTK_FLOW_BOX (self), columns);
+    }
 
   g_signal_emit (self, signals[CHANGED], 0);
 }
@@ -88,6 +95,14 @@ static void
 shopno_qs_tray_box_icon_activated (ShopnoQsTrayBox *self)
 {
   g_signal_emit (self, signals[ICON_ACTIVATED], 0);
+}
+
+
+
+static void
+shopno_qs_tray_box_icon_menu_dismissed (ShopnoQsTrayBox *self)
+{
+  g_signal_emit (self, signals[ICON_MENU_DISMISSED], 0);
 }
 
 
@@ -105,6 +120,7 @@ shopno_qs_tray_box_item_added (ShopnoQsTrayBox  *self,
   gtk_widget_show (icon);
   gtk_widget_set_no_show_all (child, TRUE);
   g_signal_connect_swapped (icon, "activated", G_CALLBACK (shopno_qs_tray_box_icon_activated), self);
+  g_signal_connect_swapped (icon, "menu-dismissed", G_CALLBACK (shopno_qs_tray_box_icon_menu_dismissed), self);
   gtk_container_add (GTK_CONTAINER (self), child);
 
   /* The id and status come later, and may change */
@@ -126,7 +142,9 @@ shopno_qs_tray_box_item_removed (ShopnoQsTrayBox  *self,
       gtk_widget_destroy (l->data);
 
   g_list_free (children);
-  g_signal_emit (self, signals[CHANGED], 0);
+
+  /* Fewer icons may need fewer columns */
+  shopno_qs_tray_box_update (self);
 }
 
 
@@ -165,6 +183,11 @@ shopno_qs_tray_box_class_init (ShopnoQsTrayBoxClass *klass)
   /* A click on one of the icons, before the app acts on it */
   signals[ICON_ACTIVATED] =
     g_signal_new ("icon-activated", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
+                  0, NULL, NULL, NULL, G_TYPE_NONE, 0);
+
+  /* An icon's menu closed without a choice */
+  signals[ICON_MENU_DISMISSED] =
+    g_signal_new ("icon-menu-dismissed", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
                   0, NULL, NULL, NULL, G_TYPE_NONE, 0);
 }
 
@@ -232,7 +255,6 @@ shopno_qs_tray_box_set_columns (ShopnoQsTrayBox *box,
   g_return_if_fail (SHOPNO_IS_QS_TRAY_BOX (box));
 
   box->columns = columns;
-  gtk_flow_box_set_min_children_per_line (GTK_FLOW_BOX (box), 1);
   shopno_qs_tray_box_update (box);
 }
 
@@ -253,4 +275,20 @@ shopno_qs_tray_box_get_n_shown (ShopnoQsTrayBox *box)
   g_list_free (children);
 
   return shown;
+}
+
+
+
+void
+shopno_qs_tray_box_reset_icons (ShopnoQsTrayBox *box)
+{
+  GList *children;
+
+  g_return_if_fail (SHOPNO_IS_QS_TRAY_BOX (box));
+
+  children = gtk_container_get_children (GTK_CONTAINER (box));
+  for (GList *l = children; l != NULL; l = l->next)
+    gtk_widget_unset_state_flags (gtk_bin_get_child (GTK_BIN (l->data)),
+                                  GTK_STATE_FLAG_PRELIGHT | GTK_STATE_FLAG_ACTIVE);
+  g_list_free (children);
 }
