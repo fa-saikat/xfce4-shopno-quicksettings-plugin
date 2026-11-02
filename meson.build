@@ -32,6 +32,7 @@ libpulse = dependency('libpulse', version: '>= 15.0')
 x11 = dependency('x11')
 xrandr = dependency('xrandr', version: '>= 1.2')
 libm = meson.get_compiler('c').find_library('m', required: false)
+dbusmenu = dependency('dbusmenu-gtk3-0.4', version: '>= 16.04.0')
 libnm = dependency('libnm', version: '>= 1.24')
 libpulse_glib = dependency('libpulse-mainloop-glib', version: '>= 15.0')
 

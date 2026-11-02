@@ -47,6 +47,10 @@ void              shopno_qs_tray_item_get_icon        (ShopnoQsTrayItem *item,
 gchar            *shopno_qs_tray_item_get_tooltip     (ShopnoQsTrayItem *item);
 const gchar      *shopno_qs_tray_item_get_title       (ShopnoQsTrayItem *item);
 
+/* The app's menu, built from its DBusMenu object and kept up to date by
+ * libdbusmenu, or NULL when it has none. Owned by the item. */
+GtkWidget        *shopno_qs_tray_item_get_menu        (ShopnoQsTrayItem *item);
+
 /* The app's DBusMenu object, or NULL */
 const gchar      *shopno_qs_tray_item_get_bus_name    (ShopnoQsTrayItem *item);
 const gchar      *shopno_qs_tray_item_get_menu_path   (ShopnoQsTrayItem *item);

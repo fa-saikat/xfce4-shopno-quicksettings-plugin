@@ -65,6 +65,7 @@ struct _ShopnoQsTray
   /* Watcher: key -> name watch id, for items registered with us */
   guint            watcher_owner_id;
   guint            watcher_object_id;
+  gboolean         owns_watcher;
   GHashTable      *watched;
 
   /* Host */
@@ -489,7 +490,18 @@ shopno_qs_tray_watcher_lost (GDBusConnection *connection,
 
   /* Another program runs the watcher; this tray stays a host of it.
    * The object stays exported, unused, in case the name comes back. */
+  self->owns_watcher = FALSE;
   g_hash_table_remove_all (self->watched);
+}
+
+
+
+static void
+shopno_qs_tray_watcher_acquired (GDBusConnection *connection,
+                                 const gchar     *name,
+                                 gpointer         data)
+{
+  SHOPNO_QS_TRAY (data)->owns_watcher = TRUE;
 }
 
 
@@ -593,7 +605,8 @@ shopno_qs_tray_init (ShopnoQsTray *self)
   shopno_qs_tray_export_watcher (self);
   self->watcher_owner_id = g_bus_own_name_on_connection (self->bus, WATCHER_NAME,
                                                          G_BUS_NAME_OWNER_FLAGS_NONE,
-                                                         NULL, shopno_qs_tray_watcher_lost,
+                                                         shopno_qs_tray_watcher_acquired,
+                                                         shopno_qs_tray_watcher_lost,
                                                          self, NULL);
 
   self->host_name = g_strdup_printf ("org.kde.StatusNotifierHost-%d-%u", (gint) getpid (), ++counter);
@@ -630,4 +643,14 @@ shopno_qs_tray_get_items (ShopnoQsTray *tray)
   g_return_val_if_fail (SHOPNO_IS_QS_TRAY (tray), NULL);
 
   return tray->items;
+}
+
+
+
+gboolean
+shopno_qs_tray_get_owns_watcher (ShopnoQsTray *tray)
+{
+  g_return_val_if_fail (SHOPNO_IS_QS_TRAY (tray), FALSE);
+
+  return tray->owns_watcher;
 }

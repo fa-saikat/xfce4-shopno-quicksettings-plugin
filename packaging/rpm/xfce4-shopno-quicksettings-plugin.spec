@@ -13,6 +13,7 @@ BuildRequires:  meson
 BuildRequires:  pkgconfig(gio-unix-2.0)
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(gtk+-3.0)
+BuildRequires:  pkgconfig(dbusmenu-gtk3-0.4)
 BuildRequires:  pkgconfig(libnm)
 BuildRequires:  pkgconfig(libpulse)
 BuildRequires:  pkgconfig(libpulse-mainloop-glib)
@@ -38,9 +39,11 @@ Suggests:       xfce4-power-manager
 Shopno Quick Settings is a panel plugin for Xfce modelled on the Windows 11
 quick settings flyout.
 
-It has tiles for Wi-Fi, Bluetooth, Focus assist and Night light, sliders for
-screen brightness and volume, the battery level, and network, volume and
-battery icons on the panel button. It talks to NetworkManager, BlueZ,
+It has tiles for Wi-Fi, Bluetooth, Do not disturb and Night light, sliders
+for screen brightness and volume, the battery level, and network, volume and
+battery icons on the panel button. It also shows other apps' tray icons
+(StatusNotifierItem), with an overflow flyout for hidden ones, and replaces
+Xfce's System Tray plugin. It talks to NetworkManager, BlueZ,
 PulseAudio or PipeWire, UPower and logind directly, and follows the GTK and
 icon theme.
 

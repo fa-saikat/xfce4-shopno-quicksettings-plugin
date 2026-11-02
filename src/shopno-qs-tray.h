@@ -29,6 +29,10 @@ ShopnoQsTray *shopno_qs_tray_get_default (void);
 /* The current items, in the order they appeared; owned by the tray */
 GPtrArray    *shopno_qs_tray_get_items   (ShopnoQsTray *tray);
 
+/* FALSE while another program, such as Xfce's System Tray plugin, runs
+ * the watcher: its icons then show in both trays */
+gboolean      shopno_qs_tray_get_owns_watcher (ShopnoQsTray *tray);
+
 G_END_DECLS
 
 #endif /* !__SHOPNO_QS_TRAY_H__ */

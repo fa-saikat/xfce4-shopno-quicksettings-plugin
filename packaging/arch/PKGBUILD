@@ -7,14 +7,14 @@ pkgdesc='Windows 11 style quick settings for the Xfce panel'
 arch=('x86_64' 'aarch64')
 url='https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin'
 license=('GPL-2.0-or-later')
-depends=('glib2' 'gtk3' 'libnm' 'libpulse' 'libx11' 'libxfce4ui' 'libxfce4util' 'libxrandr'
+depends=('glib2' 'gtk3' 'libdbusmenu-gtk3' 'libnm' 'libpulse' 'libx11' 'libxfce4ui' 'libxfce4util' 'libxrandr'
          'xfce4-panel' 'xfconf')
 makedepends=('gettext' 'meson')
 optdepends=('networkmanager: Wi-Fi tile and network icon'
             'bluez: Bluetooth tile'
             'pipewire-pulse: volume, or pulseaudio'
             'upower: battery level'
-            'xfce4-notifyd: Focus assist'
+            'xfce4-notifyd: Do not disturb'
             'blueman: More Bluetooth settings'
             'nm-connection-editor: More Wi-Fi settings and enterprise networks'
             'pavucontrol: More volume settings'

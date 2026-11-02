@@ -23,6 +23,8 @@
 
 #include "config.h"
 
+#include <libdbusmenu-gtk/menu.h>
+
 #include "shopno-qs-tray-item.h"
 
 #define ITEM_IFACE       "org.kde.StatusNotifierItem"
@@ -60,6 +62,8 @@ struct _ShopnoQsTrayItem
   GdkPixbuf       *attention_pixbuf;
   gchar           *menu_path;
   gboolean         item_is_menu;
+  GtkWidget       *menu;
+  gchar           *menu_built_for;
 };
 
 static guint signals[N_SIGNALS];
@@ -234,6 +238,10 @@ shopno_qs_tray_item_got_properties (GObject      *source,
 
   /* An item without an id is not set up yet */
   self->ready = self->id != NULL;
+
+  /* Build the menu now, so its items have arrived by the first click */
+  if (self->ready)
+    shopno_qs_tray_item_get_menu (self);
   g_signal_emit (self, signals[CHANGED], 0);
 }
 
@@ -327,6 +335,12 @@ shopno_qs_tray_item_dispose (GObject *object)
 
   g_clear_object (&self->bus);
 
+  if (self->menu != NULL)
+    {
+      gtk_widget_destroy (self->menu);
+      g_clear_object (&self->menu);
+    }
+
   G_OBJECT_CLASS (shopno_qs_tray_item_parent_class)->dispose (object);
 }
 
@@ -352,6 +366,7 @@ shopno_qs_tray_item_finalize (GObject *object)
   g_free (self->attention_icon_name);
   g_clear_object (&self->attention_pixbuf);
   g_free (self->menu_path);
+  g_free (self->menu_built_for);
 
   G_OBJECT_CLASS (shopno_qs_tray_item_parent_class)->finalize (object);
 }
@@ -509,6 +524,35 @@ shopno_qs_tray_item_get_menu_path (ShopnoQsTrayItem *item)
     return NULL;
 
   return item->menu_path;
+}
+
+
+
+GtkWidget *
+shopno_qs_tray_item_get_menu (ShopnoQsTrayItem *item)
+{
+  const gchar *path;
+
+  g_return_val_if_fail (SHOPNO_IS_QS_TRAY_ITEM (item), NULL);
+
+  path = shopno_qs_tray_item_get_menu_path (item);
+
+  /* The app may move its menu to another object */
+  if (item->menu != NULL && g_strcmp0 (path, item->menu_built_for) != 0)
+    {
+      gtk_widget_destroy (item->menu);
+      g_clear_object (&item->menu);
+    }
+
+  if (item->menu == NULL && path != NULL)
+    {
+      item->menu = GTK_WIDGET (dbusmenu_gtkmenu_new (item->bus_name, (gchar *) path));
+      g_object_ref_sink (item->menu);
+      g_free (item->menu_built_for);
+      item->menu_built_for = g_strdup (path);
+    }
+
+  return item->menu;
 }
 
 
