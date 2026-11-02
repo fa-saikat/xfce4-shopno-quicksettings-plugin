@@ -17,16 +17,27 @@
 
 #include <gtk/gtk.h>
 
+#include "shopno-qs-settings.h"
+
 G_BEGIN_DECLS
 
 #define SHOPNO_TYPE_QS_TRAY_BOX (shopno_qs_tray_box_get_type ())
-G_DECLARE_FINAL_TYPE (ShopnoQsTrayBox, shopno_qs_tray_box, SHOPNO, QS_TRAY_BOX, GtkBox)
+G_DECLARE_FINAL_TYPE (ShopnoQsTrayBox, shopno_qs_tray_box, SHOPNO, QS_TRAY_BOX, GtkFlowBox)
 
-/* The tray icons on the panel, in the order the apps appeared */
-GtkWidget *shopno_qs_tray_box_new           (void);
+/* Tray icons, in the order the apps appeared: those pinned to the panel,
+ * or with pinned FALSE, the others, for the overflow flyout. Emits
+ * "changed" when the number of shown icons may have changed. */
+GtkWidget *shopno_qs_tray_box_new           (ShopnoQsSettings *settings,
+                                             gboolean          pinned);
 
-void       shopno_qs_tray_box_set_icon_size (ShopnoQsTrayBox *box,
-                                             gint             size);
+void       shopno_qs_tray_box_set_icon_size (ShopnoQsTrayBox  *box,
+                                             gint              size);
+
+/* On the panel, one line along it; in the flyout, rows of this many */
+void       shopno_qs_tray_box_set_columns   (ShopnoQsTrayBox  *box,
+                                             guint             columns);
+
+guint      shopno_qs_tray_box_get_n_shown   (ShopnoQsTrayBox  *box);
 
 G_END_DECLS
 

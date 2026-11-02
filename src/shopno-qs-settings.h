@@ -42,6 +42,14 @@ void              shopno_qs_settings_set_tile_hidden (ShopnoQsSettings *settings
                                                       const gchar      *id,
                                                       gboolean          hidden);
 
+/* Tray apps shown on the panel, by their StatusNotifierItem id; the
+ * others wait in the overflow flyout, as on Windows 11 */
+gboolean          shopno_qs_settings_is_tray_pinned  (ShopnoQsSettings *settings,
+                                                      const gchar      *id);
+void              shopno_qs_settings_set_tray_pinned (ShopnoQsSettings *settings,
+                                                      const gchar      *id,
+                                                      gboolean          pinned);
+
 G_END_DECLS
 
 #endif /* !__SHOPNO_QS_SETTINGS_H__ */

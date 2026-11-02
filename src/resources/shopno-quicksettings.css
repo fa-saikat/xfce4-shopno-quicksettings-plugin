@@ -312,3 +312,25 @@ window:not(.composited) .shopno-qs-footer {
   padding: 2px 4px;
   border-radius: 3px;
 }
+
+/* Overflow flyout of hidden tray icons */
+
+.shopno-qs-overflow {
+  padding: 8px;
+}
+
+.shopno-qs-overflow .shopno-qs-tray-icon {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+
+.shopno-qs-tray flowboxchild {
+  padding: 0;
+  background: none;
+}
+
+.shopno-qs-overflow-button {
+  padding: 2px 4px;
+  border-radius: 3px;
+}

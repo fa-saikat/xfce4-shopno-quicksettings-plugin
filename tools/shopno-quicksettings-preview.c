@@ -78,7 +78,10 @@ main (int    argc,
       gtk_window_set_title (GTK_WINDOW (status_window), "Status icons");
       gtk_container_set_border_width (GTK_CONTAINER (status_window), 8);
       gtk_container_add (GTK_CONTAINER (status_window), box);
-      gtk_box_pack_start (GTK_BOX (box), shopno_qs_tray_box_new (), FALSE, FALSE, 0);
+      /* Pinned icons, then the ones the overflow flyout would hold */
+      gtk_box_pack_start (GTK_BOX (box), shopno_qs_tray_box_new (settings, TRUE), FALSE, FALSE, 0);
+      gtk_box_pack_start (GTK_BOX (box), gtk_separator_new (GTK_ORIENTATION_VERTICAL), FALSE, FALSE, 0);
+      gtk_box_pack_start (GTK_BOX (box), shopno_qs_tray_box_new (settings, FALSE), FALSE, FALSE, 0);
       gtk_box_pack_start (GTK_BOX (box), status, FALSE, FALSE, 0);
       gtk_widget_show_all (box);
       gtk_window_move (GTK_WINDOW (status_window), 520, 100);

@@ -18,15 +18,77 @@
 #include "shopno-qs-tray-box.h"
 #include "shopno-qs-tray-icon.h"
 
-struct _ShopnoQsTrayBox
-{
-  GtkBox        __parent__;
+/* A panel line never wraps */
+#define ONE_LINE 256
 
-  ShopnoQsTray *tray;
-  gint          icon_size;
+enum
+{
+  CHANGED,
+  ICON_ACTIVATED,
+  N_SIGNALS
 };
 
-G_DEFINE_TYPE (ShopnoQsTrayBox, shopno_qs_tray_box, GTK_TYPE_BOX)
+struct _ShopnoQsTrayBox
+{
+  GtkFlowBox        __parent__;
+
+  ShopnoQsTray     *tray;
+  ShopnoQsSettings *settings;
+  gboolean          pinned;
+  gint              icon_size;
+  guint             columns;
+};
+
+static guint signals[N_SIGNALS];
+
+G_DEFINE_TYPE (ShopnoQsTrayBox, shopno_qs_tray_box, GTK_TYPE_FLOW_BOX)
+
+
+
+static gboolean
+shopno_qs_tray_box_wants (ShopnoQsTrayBox  *self,
+                          ShopnoQsTrayItem *item)
+{
+  if (!shopno_qs_tray_item_get_visible (item))
+    return FALSE;
+
+  return shopno_qs_settings_is_tray_pinned (self->settings, shopno_qs_tray_item_get_id (item)) == self->pinned;
+}
+
+
+
+/* Show the icons that belong here; the flow box skips hidden children */
+static void
+shopno_qs_tray_box_update (ShopnoQsTrayBox *self)
+{
+  GList *children = gtk_container_get_children (GTK_CONTAINER (self));
+
+  for (GList *l = children; l != NULL; l = l->next)
+    {
+      GtkWidget *icon = gtk_bin_get_child (GTK_BIN (l->data));
+
+      gtk_widget_set_visible (l->data,
+                              shopno_qs_tray_box_wants (self, shopno_qs_tray_icon_get_item (SHOPNO_QS_TRAY_ICON (icon))));
+    }
+
+  g_list_free (children);
+
+  /* A flow box asks for room for its widest row, so a grid of few icons
+   * would be wide and mostly empty */
+  if (self->columns > 0)
+    gtk_flow_box_set_max_children_per_line (GTK_FLOW_BOX (self),
+                                            CLAMP (shopno_qs_tray_box_get_n_shown (self), 1, self->columns));
+
+  g_signal_emit (self, signals[CHANGED], 0);
+}
+
+
+
+static void
+shopno_qs_tray_box_icon_activated (ShopnoQsTrayBox *self)
+{
+  g_signal_emit (self, signals[ICON_ACTIVATED], 0);
+}
 
 
 
@@ -34,12 +96,21 @@ static void
 shopno_qs_tray_box_item_added (ShopnoQsTrayBox  *self,
                                ShopnoQsTrayItem *item)
 {
+  GtkWidget *child = gtk_flow_box_child_new ();
   GtkWidget *icon = shopno_qs_tray_icon_new (item);
 
+  gtk_widget_set_can_focus (child, FALSE);
   shopno_qs_tray_icon_set_icon_size (SHOPNO_QS_TRAY_ICON (icon), self->icon_size);
-  /* The icon shows itself once the app is ready and not passive */
-  gtk_widget_set_no_show_all (icon, TRUE);
-  gtk_box_pack_start (GTK_BOX (self), icon, FALSE, FALSE, 0);
+  gtk_container_add (GTK_CONTAINER (child), icon);
+  gtk_widget_show (icon);
+  gtk_widget_set_no_show_all (child, TRUE);
+  g_signal_connect_swapped (icon, "activated", G_CALLBACK (shopno_qs_tray_box_icon_activated), self);
+  gtk_container_add (GTK_CONTAINER (self), child);
+
+  /* The id and status come later, and may change */
+  g_signal_connect_object (item, "changed", G_CALLBACK (shopno_qs_tray_box_update),
+                           self, G_CONNECT_SWAPPED | G_CONNECT_AFTER);
+  shopno_qs_tray_box_update (self);
 }
 
 
@@ -51,10 +122,11 @@ shopno_qs_tray_box_item_removed (ShopnoQsTrayBox  *self,
   GList *children = gtk_container_get_children (GTK_CONTAINER (self));
 
   for (GList *l = children; l != NULL; l = l->next)
-    if (shopno_qs_tray_icon_get_item (l->data) == item)
+    if (shopno_qs_tray_icon_get_item (SHOPNO_QS_TRAY_ICON (gtk_bin_get_child (GTK_BIN (l->data)))) == item)
       gtk_widget_destroy (l->data);
 
   g_list_free (children);
+  g_signal_emit (self, signals[CHANGED], 0);
 }
 
 
@@ -70,6 +142,12 @@ shopno_qs_tray_box_dispose (GObject *object)
       g_clear_object (&self->tray);
     }
 
+  if (self->settings != NULL)
+    {
+      g_signal_handlers_disconnect_by_data (self->settings, self);
+      g_clear_object (&self->settings);
+    }
+
   G_OBJECT_CLASS (shopno_qs_tray_box_parent_class)->dispose (object);
 }
 
@@ -79,6 +157,15 @@ static void
 shopno_qs_tray_box_class_init (ShopnoQsTrayBoxClass *klass)
 {
   G_OBJECT_CLASS (klass)->dispose = shopno_qs_tray_box_dispose;
+
+  signals[CHANGED] =
+    g_signal_new ("changed", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
+                  0, NULL, NULL, NULL, G_TYPE_NONE, 0);
+
+  /* A click on one of the icons, before the app acts on it */
+  signals[ICON_ACTIVATED] =
+    g_signal_new ("icon-activated", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
+                  0, NULL, NULL, NULL, G_TYPE_NONE, 0);
 }
 
 
@@ -86,10 +173,26 @@ shopno_qs_tray_box_class_init (ShopnoQsTrayBoxClass *klass)
 static void
 shopno_qs_tray_box_init (ShopnoQsTrayBox *self)
 {
-  GPtrArray *items;
-
   self->icon_size = 16;
+
+  gtk_flow_box_set_selection_mode (GTK_FLOW_BOX (self), GTK_SELECTION_NONE);
+  gtk_flow_box_set_homogeneous (GTK_FLOW_BOX (self), TRUE);
+  gtk_flow_box_set_max_children_per_line (GTK_FLOW_BOX (self), ONE_LINE);
   gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (self)), "shopno-qs-tray");
+}
+
+
+
+GtkWidget *
+shopno_qs_tray_box_new (ShopnoQsSettings *settings,
+                        gboolean          pinned)
+{
+  ShopnoQsTrayBox *self = g_object_new (SHOPNO_TYPE_QS_TRAY_BOX, NULL);
+  GPtrArray       *items;
+
+  self->settings = g_object_ref (settings);
+  self->pinned = pinned;
+  g_signal_connect_swapped (settings, "notify::tray-pinned", G_CALLBACK (shopno_qs_tray_box_update), self);
 
   self->tray = shopno_qs_tray_get_default ();
   g_signal_connect_swapped (self->tray, "item-added", G_CALLBACK (shopno_qs_tray_box_item_added), self);
@@ -98,14 +201,8 @@ shopno_qs_tray_box_init (ShopnoQsTrayBox *self)
   items = shopno_qs_tray_get_items (self->tray);
   for (guint i = 0; i < items->len; i++)
     shopno_qs_tray_box_item_added (self, g_ptr_array_index (items, i));
-}
 
-
-
-GtkWidget *
-shopno_qs_tray_box_new (void)
-{
-  return g_object_new (SHOPNO_TYPE_QS_TRAY_BOX, NULL);
+  return GTK_WIDGET (self);
 }
 
 
@@ -122,6 +219,38 @@ shopno_qs_tray_box_set_icon_size (ShopnoQsTrayBox *box,
 
   children = gtk_container_get_children (GTK_CONTAINER (box));
   for (GList *l = children; l != NULL; l = l->next)
-    shopno_qs_tray_icon_set_icon_size (l->data, size);
+    shopno_qs_tray_icon_set_icon_size (SHOPNO_QS_TRAY_ICON (gtk_bin_get_child (GTK_BIN (l->data))), size);
   g_list_free (children);
+}
+
+
+
+void
+shopno_qs_tray_box_set_columns (ShopnoQsTrayBox *box,
+                                guint            columns)
+{
+  g_return_if_fail (SHOPNO_IS_QS_TRAY_BOX (box));
+
+  box->columns = columns;
+  gtk_flow_box_set_min_children_per_line (GTK_FLOW_BOX (box), 1);
+  shopno_qs_tray_box_update (box);
+}
+
+
+
+guint
+shopno_qs_tray_box_get_n_shown (ShopnoQsTrayBox *box)
+{
+  GList *children;
+  guint  shown = 0;
+
+  g_return_val_if_fail (SHOPNO_IS_QS_TRAY_BOX (box), 0);
+
+  children = gtk_container_get_children (GTK_CONTAINER (box));
+  for (GList *l = children; l != NULL; l = l->next)
+    if (gtk_widget_get_visible (l->data))
+      shown++;
+  g_list_free (children);
+
+  return shown;
 }
