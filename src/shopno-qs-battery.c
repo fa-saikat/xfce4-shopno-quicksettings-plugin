@@ -272,20 +272,6 @@ shopno_qs_battery_get_percentage (ShopnoQsBattery *battery)
 
 
 
-gboolean
-shopno_qs_battery_get_plugged_in (ShopnoQsBattery *battery)
-{
-  guint state;
-
-  g_return_val_if_fail (SHOPNO_IS_QS_BATTERY (battery), FALSE);
-
-  state = shopno_qs_battery_get_uint (battery, "State");
-
-  return state == STATE_CHARGING || state == STATE_FULLY_CHARGED || state == STATE_PENDING_CHARGE;
-}
-
-
-
 const gchar *
 shopno_qs_battery_get_icon_name (ShopnoQsBattery *battery)
 {

@@ -52,7 +52,6 @@ const gchar      *shopno_qs_tray_item_get_title       (ShopnoQsTrayItem *item);
 GtkWidget        *shopno_qs_tray_item_get_menu        (ShopnoQsTrayItem *item);
 
 /* The app's DBusMenu object, or NULL */
-const gchar      *shopno_qs_tray_item_get_bus_name    (ShopnoQsTrayItem *item);
 const gchar      *shopno_qs_tray_item_get_menu_path   (ShopnoQsTrayItem *item);
 gboolean          shopno_qs_tray_item_get_is_menu     (ShopnoQsTrayItem *item);
 

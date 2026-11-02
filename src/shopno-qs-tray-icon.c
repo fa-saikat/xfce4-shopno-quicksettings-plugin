@@ -19,10 +19,14 @@
 enum
 {
   ACTIVATED,
+  MENU_DISMISSED,
   N_SIGNALS
 };
 
 static guint signals[N_SIGNALS];
+
+/* Whether an item of the open menu was chosen; one menu is open at a time */
+static gboolean menu_item_chosen;
 
 struct _ShopnoQsTrayIcon
 {
@@ -32,6 +36,9 @@ struct _ShopnoQsTrayIcon
   GtkWidget        *image;
   gint              icon_size;
   gdouble           smooth_delta;
+
+  /* The item changed while the icon was off screen */
+  gboolean          stale;
 };
 
 G_DEFINE_TYPE (ShopnoQsTrayIcon, shopno_qs_tray_icon, GTK_TYPE_BUTTON)
@@ -135,9 +142,70 @@ shopno_qs_tray_icon_update (ShopnoQsTrayIcon *self)
 
 
 
+/* Each app has an icon on the panel and one in the overflow flyout, and
+ * at most one of them is on screen; the other catches up when shown */
+static void
+shopno_qs_tray_icon_changed (ShopnoQsTrayIcon *self)
+{
+  if (gtk_widget_get_mapped (GTK_WIDGET (self)))
+    shopno_qs_tray_icon_update (self);
+  else
+    self->stale = TRUE;
+}
+
+
+
+static void
+shopno_qs_tray_icon_map (GtkWidget *widget)
+{
+  ShopnoQsTrayIcon *self = SHOPNO_QS_TRAY_ICON (widget);
+
+  GTK_WIDGET_CLASS (shopno_qs_tray_icon_parent_class)->map (widget);
+
+  if (self->stale)
+    {
+      self->stale = FALSE;
+      shopno_qs_tray_icon_update (self);
+    }
+}
+
+
+
 /*
  * Input
  */
+
+/* Any menu item, in any menu: opening a submenu is not a choice */
+static gboolean
+shopno_qs_tray_icon_menu_item_hook (GSignalInvocationHint *hint,
+                                    guint                  n_params,
+                                    const GValue          *params,
+                                    gpointer               data)
+{
+  GtkMenuItem *item = g_value_get_object (&params[0]);
+
+  if (gtk_menu_item_get_submenu (item) == NULL)
+    menu_item_chosen = TRUE;
+
+  return TRUE;
+}
+
+
+
+/* After the chosen item, if any, was activated */
+static void
+shopno_qs_tray_icon_menu_done (GtkMenuShell     *menu,
+                               ShopnoQsTrayIcon *self)
+{
+  g_signal_handlers_disconnect_by_func (menu, shopno_qs_tray_icon_menu_done, self);
+
+  /* The menu held the pointer, so the icon saw no leave */
+  gtk_widget_unset_state_flags (GTK_WIDGET (self), GTK_STATE_FLAG_PRELIGHT | GTK_STATE_FLAG_ACTIVE);
+
+  g_signal_emit (self, signals[menu_item_chosen ? ACTIVATED : MENU_DISMISSED], 0);
+}
+
+
 
 /* The app's own menu, at the pointer as on Windows; apps without one are
  * asked to show theirs */
@@ -145,13 +213,30 @@ static void
 shopno_qs_tray_icon_show_menu (ShopnoQsTrayIcon *self,
                                GdkEventButton   *event)
 {
-  GtkWidget *menu = shopno_qs_tray_item_get_menu (self->item);
+  static gsize  hooked = 0;
+  GtkWidget    *menu = shopno_qs_tray_item_get_menu (self->item);
 
   if (menu == NULL)
     {
+      /* A popup holding the input closes so the app's menu can take it */
+      g_signal_emit (self, signals[ACTIVATED], 0);
       shopno_qs_tray_item_context_menu (self->item, (gint) event->x_root, (gint) event->y_root);
       return;
     }
+
+  if (g_once_init_enter (&hooked))
+    {
+      g_type_class_ref (GTK_TYPE_MENU_ITEM);
+      g_signal_add_emission_hook (g_signal_lookup ("activate", GTK_TYPE_MENU_ITEM), 0,
+                                  shopno_qs_tray_icon_menu_item_hook, NULL, NULL);
+      g_once_init_leave (&hooked, 1);
+    }
+
+  /* Our menu grabs the input itself, so a popup holding it stays open
+   * until a choice is made */
+  menu_item_chosen = FALSE;
+  g_signal_handlers_disconnect_by_func (menu, shopno_qs_tray_icon_menu_done, self);
+  g_signal_connect_object (menu, "selection-done", G_CALLBACK (shopno_qs_tray_icon_menu_done), self, 0);
 
   gtk_menu_set_screen (GTK_MENU (menu), gtk_widget_get_screen (GTK_WIDGET (self)));
   gtk_menu_popup_at_pointer (GTK_MENU (menu), (GdkEvent *) event);
@@ -169,22 +254,25 @@ shopno_qs_tray_icon_button_release_event (GtkWidget      *widget,
 
   GTK_WIDGET_CLASS (shopno_qs_tray_icon_parent_class)->button_release_event (widget, event);
 
-  /* Before the app acts, so a popup holding the input can close and the
-   * app's own menu can take it */
-  if (event->button >= 1 && event->button <= 3)
-    g_signal_emit (self, signals[ACTIVATED], 0);
-
   switch (event->button)
     {
     case 1:
       /* Some apps only have a menu */
       if (shopno_qs_tray_item_get_is_menu (self->item))
-        shopno_qs_tray_icon_show_menu (self, event);
+        {
+          shopno_qs_tray_icon_show_menu (self, event);
+        }
       else
-        shopno_qs_tray_item_activate (self->item, x, y);
+        {
+          /* Before the app acts, so a popup holding the input can close
+           * and a window the app opens can take it */
+          g_signal_emit (self, signals[ACTIVATED], 0);
+          shopno_qs_tray_item_activate (self->item, x, y);
+        }
       break;
 
     case 2:
+      g_signal_emit (self, signals[ACTIVATED], 0);
       shopno_qs_tray_item_secondary_activate (self->item, x, y);
       break;
 
@@ -271,7 +359,7 @@ shopno_qs_tray_icon_style_updated (GtkWidget *widget)
 
   /* Symbolic icons follow the text color of the theme */
   if (self->item != NULL)
-    shopno_qs_tray_icon_update (self);
+    shopno_qs_tray_icon_changed (self);
 }
 
 
@@ -300,6 +388,7 @@ shopno_qs_tray_icon_class_init (ShopnoQsTrayIconClass *klass)
 
   gobject_class->dispose = shopno_qs_tray_icon_dispose;
 
+  widget_class->map = shopno_qs_tray_icon_map;
   widget_class->button_press_event = shopno_qs_tray_icon_button_press_event;
   widget_class->button_release_event = shopno_qs_tray_icon_button_release_event;
   widget_class->scroll_event = shopno_qs_tray_icon_scroll_event;
@@ -307,6 +396,10 @@ shopno_qs_tray_icon_class_init (ShopnoQsTrayIconClass *klass)
 
   signals[ACTIVATED] =
     g_signal_new ("activated", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
+                  0, NULL, NULL, NULL, G_TYPE_NONE, 0);
+
+  signals[MENU_DISMISSED] =
+    g_signal_new ("menu-dismissed", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
                   0, NULL, NULL, NULL, G_TYPE_NONE, 0);
 }
 
@@ -335,7 +428,7 @@ shopno_qs_tray_icon_new (ShopnoQsTrayItem *item)
   ShopnoQsTrayIcon *self = g_object_new (SHOPNO_TYPE_QS_TRAY_ICON, NULL);
 
   self->item = g_object_ref (item);
-  g_signal_connect_swapped (item, "changed", G_CALLBACK (shopno_qs_tray_icon_update), self);
+  g_signal_connect_swapped (item, "changed", G_CALLBACK (shopno_qs_tray_icon_changed), self);
   shopno_qs_tray_icon_update (self);
 
   return GTK_WIDGET (self);
@@ -362,6 +455,7 @@ shopno_qs_tray_icon_set_icon_size (ShopnoQsTrayIcon *icon,
   if (icon->icon_size == size)
     return;
 
+  /* Now even off screen: the size is part of the size request */
   icon->icon_size = size;
   shopno_qs_tray_icon_update (icon);
 }

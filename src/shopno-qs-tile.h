@@ -32,7 +32,6 @@ void       shopno_qs_tile_set_label       (ShopnoQsTile *tile,
                                            const gchar  *label);
 void       shopno_qs_tile_set_active      (ShopnoQsTile *tile,
                                            gboolean      active);
-gboolean   shopno_qs_tile_get_active      (ShopnoQsTile *tile);
 
 /* Insensitive keeps the tile visible but greyed out, like Windows does
  * for hardware that is switched off. The tooltip says why. */

@@ -114,6 +114,25 @@ shopno_qs_overflow_icon_activated (ShopnoQsOverflow *self)
 
 
 
+static void
+shopno_qs_overflow_icon_menu_dismissed (ShopnoQsOverflow *self)
+{
+  if (!gtk_widget_get_visible (GTK_WIDGET (self)))
+    return;
+
+  /* The menu's grab replaced ours and ended with it; take it back so a
+   * click outside still closes the flyout */
+  if (self->grab_retry_id != 0)
+    g_source_remove (self->grab_retry_id);
+  self->grab_seat = NULL;
+  self->grab_retries = 0;
+  self->grab_retry_id = 0;
+  if (shopno_qs_overflow_try_grab (self) == G_SOURCE_CONTINUE)
+    self->grab_retry_id = g_timeout_add (GRAB_RETRY_INTERVAL, shopno_qs_overflow_try_grab, self);
+}
+
+
+
 /*
  * GtkWidget
  */
@@ -139,7 +158,13 @@ shopno_qs_overflow_map_event (GtkWidget   *widget,
 static void
 shopno_qs_overflow_hide (GtkWidget *widget)
 {
-  shopno_qs_overflow_ungrab (SHOPNO_QS_OVERFLOW (widget));
+  ShopnoQsOverflow *self = SHOPNO_QS_OVERFLOW (widget);
+
+  shopno_qs_overflow_ungrab (self);
+
+  /* The pointer may be on an icon, which would never see it leave */
+  if (self->box != NULL)
+    shopno_qs_tray_box_reset_icons (SHOPNO_QS_TRAY_BOX (self->box));
 
   GTK_WIDGET_CLASS (shopno_qs_overflow_parent_class)->hide (widget);
 }
@@ -295,6 +320,8 @@ shopno_qs_overflow_new (ShopnoQsSettings *settings)
   shopno_qs_tray_box_set_icon_size (SHOPNO_QS_TRAY_BOX (self->box), ICON_SIZE);
   g_signal_connect_swapped (self->box, "changed", G_CALLBACK (shopno_qs_overflow_box_changed), self);
   g_signal_connect_swapped (self->box, "icon-activated", G_CALLBACK (shopno_qs_overflow_icon_activated), self);
+  g_signal_connect_swapped (self->box, "icon-menu-dismissed",
+                            G_CALLBACK (shopno_qs_overflow_icon_menu_dismissed), self);
   gtk_box_pack_start (GTK_BOX (self->frame), self->box, FALSE, FALSE, 0);
 
   gtk_widget_show_all (self->frame);
