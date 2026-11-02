@@ -35,7 +35,7 @@ tiles[] =
 {
   { SHOPNO_QS_TILE_WIFI, N_("_Wi-Fi") },
   { SHOPNO_QS_TILE_BLUETOOTH, N_("_Bluetooth") },
-  { SHOPNO_QS_TILE_FOCUS, N_("_Focus assist") },
+  { SHOPNO_QS_TILE_DND, N_("_Do not disturb") },
   { SHOPNO_QS_TILE_NIGHT_LIGHT, N_("_Night light") },
 };
 

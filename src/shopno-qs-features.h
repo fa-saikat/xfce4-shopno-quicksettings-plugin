@@ -22,14 +22,15 @@ G_BEGIN_DECLS
 /* Tile ids, stored in the hidden-tiles setting */
 #define SHOPNO_QS_TILE_WIFI         "wifi"
 #define SHOPNO_QS_TILE_BLUETOOTH    "bluetooth"
-#define SHOPNO_QS_TILE_FOCUS        "focus-assist"
+/* Do not disturb was called Focus assist; the id stays for saved settings */
+#define SHOPNO_QS_TILE_DND          "focus-assist"
 #define SHOPNO_QS_TILE_NIGHT_LIGHT  "night-light"
 
 /* Each feature adds its tiles, sliders, pages and footer items to the
  * window, and lives as long as the window */
 void shopno_qs_wifi_attach      (ShopnoQsWindow *window);
 void shopno_qs_bluetooth_attach (ShopnoQsWindow *window);
-void shopno_qs_focus_attach     (ShopnoQsWindow *window);
+void shopno_qs_dnd_attach       (ShopnoQsWindow *window);
 void shopno_qs_night_light_attach (ShopnoQsWindow *window);
 void shopno_qs_brightness_attach (ShopnoQsWindow *window);
 void shopno_qs_volume_attach    (ShopnoQsWindow *window);

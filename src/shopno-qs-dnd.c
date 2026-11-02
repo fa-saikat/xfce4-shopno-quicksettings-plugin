@@ -13,7 +13,7 @@
  */
 
 /*
- * Focus assist tile: Do Not Disturb of xfce4-notifyd, which keeps it in
+ * Do not disturb tile: Do Not Disturb of xfce4-notifyd, which keeps it in
  * the /do-not-disturb property of its xfconf channel. Changes made in
  * the notification settings show up here too.
  */
@@ -29,6 +29,9 @@
 #define CHANNEL  "xfce4-notifyd"
 #define PROPERTY "/do-not-disturb"
 
+#define ICON_OFF "preferences-system-notifications-symbolic"
+#define ICON_ON  "notifications-disabled-symbolic"
+
 /* The name xfce4-notifyd gives in GetServerInformation */
 #define NOTIFYD_NAME "Xfce Notify Daemon"
 
@@ -38,68 +41,72 @@ typedef struct
   XfconfChannel *channel;
   GCancellable  *cancellable;
   gboolean       other_daemon;
-} Focus;
+} Dnd;
 
 
 
 static void
-focus_free (gpointer data)
+dnd_free (gpointer data)
 {
-  Focus *focus = data;
+  Dnd *dnd = data;
 
-  g_cancellable_cancel (focus->cancellable);
-  g_object_unref (focus->cancellable);
+  g_cancellable_cancel (dnd->cancellable);
+  g_object_unref (dnd->cancellable);
 
-  if (focus->channel != NULL)
+  if (dnd->channel != NULL)
     {
-      g_signal_handlers_disconnect_by_data (focus->channel, focus);
+      g_signal_handlers_disconnect_by_data (dnd->channel, dnd);
       xfconf_shutdown ();
     }
 
-  g_free (focus);
+  g_free (dnd);
 }
 
 
 
 static void
-focus_update (Focus *focus)
+dnd_update (Dnd *dnd)
 {
-  ShopnoQsTile *tile = SHOPNO_QS_TILE (focus->tile);
-  gboolean      available = focus->channel != NULL && !focus->other_daemon;
+  ShopnoQsTile *tile = SHOPNO_QS_TILE (dnd->tile);
+  gboolean      available = dnd->channel != NULL && !dnd->other_daemon;
+  gboolean      active;
 
   shopno_qs_tile_set_available (tile, available,
-                                focus->channel == NULL
+                                dnd->channel == NULL
                                 ? _("The settings service is not running")
                                 : _("Needs the Xfce notification daemon"));
 
+  /* A bell, crossed out while notifications are held back */
+  active = available && xfconf_channel_get_bool (dnd->channel, PROPERTY, FALSE);
+  shopno_qs_tile_set_icon_name (tile, active ? ICON_ON : ICON_OFF);
   if (available)
-    shopno_qs_tile_set_active (tile, xfconf_channel_get_bool (focus->channel, PROPERTY, FALSE));
+    shopno_qs_tile_set_active (tile, active);
 }
 
 
 
 static void
-focus_toggled (Focus *focus)
+dnd_toggled (Dnd *dnd)
 {
-  if (focus->channel == NULL)
+  if (dnd->channel == NULL)
     return;
 
   /* The tile follows through "property-changed" */
-  xfconf_channel_set_bool (focus->channel, PROPERTY,
-                           !xfconf_channel_get_bool (focus->channel, PROPERTY, FALSE));
+  xfconf_channel_set_bool (dnd->channel, PROPERTY,
+                           !xfconf_channel_get_bool (dnd->channel, PROPERTY, FALSE));
 }
 
 
 
 static void
-focus_server_info (GObject      *source,
+dnd_server_info (GObject      *source,
                    GAsyncResult *result,
                    gpointer      data)
 {
   GVariant    *reply;
   GError      *error = NULL;
   const gchar *name = NULL;
-  Focus       *focus;
+  Dnd       *dnd;
 
   reply = g_dbus_connection_call_finish (G_DBUS_CONNECTION (source), result, &error);
   if (reply == NULL && g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
@@ -108,28 +115,28 @@ focus_server_info (GObject      *source,
       return;
     }
 
-  focus = data;
+  dnd = data;
 
   if (reply != NULL)
     {
       g_variant_get (reply, "(&s&s&s&s)", &name, NULL, NULL, NULL);
-      focus->other_daemon = g_strcmp0 (name, NOTIFYD_NAME) != 0;
+      dnd->other_daemon = g_strcmp0 (name, NOTIFYD_NAME) != 0;
       g_variant_unref (reply);
     }
   else
     {
       /* No daemon running: xfce4-notifyd is started on demand */
-      focus->other_daemon = FALSE;
+      dnd->other_daemon = FALSE;
       g_error_free (error);
     }
 
-  focus_update (focus);
+  dnd_update (dnd);
 }
 
 
 
 static void
-focus_check_daemon (Focus *focus)
+dnd_check_daemon (Dnd *dnd)
 {
   GDBusConnection *bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, NULL);
 
@@ -140,26 +147,26 @@ focus_check_daemon (Focus *focus)
   g_dbus_connection_call (bus, "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
                           "org.freedesktop.Notifications", "GetServerInformation",
                           NULL, G_VARIANT_TYPE ("(ssss)"), G_DBUS_CALL_FLAGS_NO_AUTO_START,
-                          -1, focus->cancellable, focus_server_info, focus);
+                          -1, dnd->cancellable, dnd_server_info, dnd);
   g_object_unref (bus);
 }
 
 
 
 void
-shopno_qs_focus_attach (ShopnoQsWindow *window)
+shopno_qs_dnd_attach (ShopnoQsWindow *window)
 {
-  Focus  *focus = g_new0 (Focus, 1);
+  Dnd  *dnd = g_new0 (Dnd, 1);
   GError *error = NULL;
 
-  focus->cancellable = g_cancellable_new ();
-  g_object_set_data_full (G_OBJECT (window), "shopno-qs-focus", focus, focus_free);
+  dnd->cancellable = g_cancellable_new ();
+  g_object_set_data_full (G_OBJECT (window), "shopno-qs-dnd", dnd, dnd_free);
 
   if (xfconf_init (&error))
     {
-      focus->channel = xfconf_channel_get (CHANNEL);
-      g_signal_connect_swapped (focus->channel, "property-changed::" PROPERTY,
-                                G_CALLBACK (focus_update), focus);
+      dnd->channel = xfconf_channel_get (CHANNEL);
+      g_signal_connect_swapped (dnd->channel, "property-changed::" PROPERTY,
+                                G_CALLBACK (dnd_update), dnd);
     }
   else
     {
@@ -167,14 +174,14 @@ shopno_qs_focus_attach (ShopnoQsWindow *window)
       g_error_free (error);
     }
 
-  focus->tile = shopno_qs_tile_new ("weather-clear-night-symbolic", _("Focus assist"), FALSE);
-  g_signal_connect_swapped (focus->tile, "toggled", G_CALLBACK (focus_toggled), focus);
-  shopno_qs_window_add_tile (window, SHOPNO_QS_TILE_FOCUS, focus->tile);
+  dnd->tile = shopno_qs_tile_new (ICON_OFF, _("Do not disturb"), FALSE);
+  g_signal_connect_swapped (dnd->tile, "toggled", G_CALLBACK (dnd_toggled), dnd);
+  shopno_qs_window_add_tile (window, SHOPNO_QS_TILE_DND, dnd->tile);
 
   /* The daemon may change while the panel runs, so ask again each time
    * the flyout opens */
-  g_signal_connect_swapped (window, "map", G_CALLBACK (focus_check_daemon), focus);
+  g_signal_connect_swapped (window, "map", G_CALLBACK (dnd_check_daemon), dnd);
 
-  focus_update (focus);
-  focus_check_daemon (focus);
+  dnd_update (dnd);
+  dnd_check_daemon (dnd);
 }
