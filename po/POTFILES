@@ -3,7 +3,7 @@ src/shopno-qs-battery.c
 src/shopno-qs-bluetooth-ui.c
 src/shopno-qs-brightness.c
 src/shopno-qs-dialog.c
-src/shopno-qs-focus.c
+src/shopno-qs-dnd.c
 src/shopno-qs-footer.c
 src/shopno-qs-night-light.c
 src/shopno-qs-plugin.c
