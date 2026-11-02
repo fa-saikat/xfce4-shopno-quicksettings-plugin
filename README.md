@@ -8,7 +8,7 @@
 </p>
 
 A Windows 11-style quick settings flyout for the Xfce panel: Wi-Fi,
-Bluetooth, Focus assist, Night light, brightness, volume and battery in one
+Bluetooth, Do not disturb, Night light, brightness, volume and battery in one
 place, behind one set of icons on the panel.
 
 <a href="#features">Features</a> ·
@@ -43,7 +43,7 @@ taskbar. Scroll on it to change the volume; hover for a summary.
   type the password in place for a new one, or disconnect.
 - **Bluetooth**: turns the adapter on or off, lifting an rfkill block if
   needed. Its page lists paired devices; click one to connect or disconnect.
-- **Focus assist**: Do Not Disturb for xfce4-notifyd.
+- **Do not disturb**: holds back notification popups from xfce4-notifyd.
 - **Night light**: warms the screen color. Stays on across restarts.
 
 **Sliders.**
@@ -68,7 +68,7 @@ missing is greyed out with a tooltip saying why.
 | Volume          | PipeWire (with pipewire-pulse) or PulseAudio                       |
 | Brightness      | systemd-logind (or elogind 243 or newer), and a backlight          |
 | Battery         | UPower                                                             |
-| Focus assist    | xfce4-notifyd                                                      |
+| Do not disturb  | xfce4-notifyd                                                      |
 | Night light     | An X11 session with XRandR                                         |
 
 The **More … settings** links open nm-connection-editor, blueman-manager,

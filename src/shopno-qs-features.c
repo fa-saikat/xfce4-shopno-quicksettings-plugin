@@ -24,7 +24,7 @@ shopno_qs_features_attach (ShopnoQsWindow *window)
   /* Tiles */
   shopno_qs_wifi_attach (window);
   shopno_qs_bluetooth_attach (window);
-  shopno_qs_focus_attach (window);
+  shopno_qs_dnd_attach (window);
   shopno_qs_night_light_attach (window);
 
   /* Sliders */
