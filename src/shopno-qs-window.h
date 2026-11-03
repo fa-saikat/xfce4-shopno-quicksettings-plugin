@@ -44,6 +44,12 @@ void       shopno_qs_window_add_tile       (ShopnoQsWindow   *window,
                                             const gchar      *id,
                                             GtkWidget        *tile);
 
+/* For hardware that comes and goes, such as an Ethernet port on a dock:
+ * an absent tile is not shown, whatever the hidden-tiles setting says */
+void       shopno_qs_window_set_tile_present (ShopnoQsWindow *window,
+                                              GtkWidget      *tile,
+                                              gboolean        present);
+
 void       shopno_qs_window_add_slider     (ShopnoQsWindow   *window,
                                             GtkWidget        *slider);
 
