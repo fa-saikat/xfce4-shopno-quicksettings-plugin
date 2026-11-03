@@ -53,18 +53,33 @@ shopno_qs_dialog_tile_toggled (GtkToggleButton  *check,
 
 
 
+/* Where a tray app's icon goes; the ids of the choices */
+#define TRAY_PANEL    "panel"
+#define TRAY_OVERFLOW "overflow"
+#define TRAY_HIDDEN   "hidden"
+
 static void
-shopno_qs_dialog_tray_toggled (GtkToggleButton  *check,
-                               ShopnoQsSettings *settings)
+shopno_qs_dialog_tray_changed_place (GtkComboBox      *combo,
+                                     ShopnoQsSettings *settings)
 {
-  shopno_qs_settings_set_tray_pinned (settings, g_object_get_data (G_OBJECT (check), TRAY_KEY),
-                                      gtk_toggle_button_get_active (check));
+  const gchar *id = g_object_get_data (G_OBJECT (combo), TRAY_KEY);
+  const gchar *place = gtk_combo_box_get_active_id (combo);
+
+  /* Hidden apps keep their pin, so showing them again puts them back */
+  if (g_strcmp0 (place, TRAY_HIDDEN) == 0)
+    {
+      shopno_qs_settings_set_tray_hidden (settings, id, TRUE);
+      return;
+    }
+
+  shopno_qs_settings_set_tray_pinned (settings, id, g_strcmp0 (place, TRAY_PANEL) == 0);
+  shopno_qs_settings_set_tray_hidden (settings, id, FALSE);
 }
 
 
 
-/* One "Show on the panel" box per tray app: the running ones, and the
- * pinned ones that are not running, so a pin can still be undone */
+/* Where each tray app's icon goes: the running apps, and the pinned ones
+ * that are not running, so a pin can still be undone */
 static void
 shopno_qs_dialog_fill_tray_apps (GtkWidget *list)
 {
@@ -97,14 +112,34 @@ shopno_qs_dialog_fill_tray_apps (GtkWidget *list)
   for (GList *l = ids; l != NULL; l = l->next)
     {
       const gchar *title = g_hash_table_lookup (titles, l->data);
-      GtkWidget   *check = gtk_check_button_new_with_label (title != NULL ? title : l->data);
+      GtkWidget   *row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
+      GtkWidget   *label = gtk_label_new (title != NULL ? title : l->data);
+      GtkWidget   *combo = gtk_combo_box_text_new ();
+      const gchar *place;
 
-      gtk_widget_set_tooltip_text (check, l->data);
-      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (check),
-                                    shopno_qs_settings_is_tray_pinned (settings, l->data));
-      g_object_set_data_full (G_OBJECT (check), TRAY_KEY, g_strdup (l->data), g_free);
-      g_signal_connect (check, "toggled", G_CALLBACK (shopno_qs_dialog_tray_toggled), settings);
-      gtk_box_pack_start (GTK_BOX (list), check, FALSE, FALSE, 0);
+      gtk_label_set_xalign (GTK_LABEL (label), 0.0);
+      gtk_label_set_ellipsize (GTK_LABEL (label), PANGO_ELLIPSIZE_END);
+      gtk_widget_set_tooltip_text (label, l->data);
+      gtk_label_set_mnemonic_widget (GTK_LABEL (label), combo);
+      gtk_box_pack_start (GTK_BOX (row), label, TRUE, TRUE, 0);
+
+      gtk_combo_box_text_append (GTK_COMBO_BOX_TEXT (combo), TRAY_PANEL, _("On the panel"));
+      gtk_combo_box_text_append (GTK_COMBO_BOX_TEXT (combo), TRAY_OVERFLOW, _("Behind ^"));
+      gtk_combo_box_text_append (GTK_COMBO_BOX_TEXT (combo), TRAY_HIDDEN, _("Not shown"));
+
+      if (shopno_qs_settings_is_tray_hidden (settings, l->data))
+        place = TRAY_HIDDEN;
+      else if (shopno_qs_settings_is_tray_pinned (settings, l->data))
+        place = TRAY_PANEL;
+      else
+        place = TRAY_OVERFLOW;
+      gtk_combo_box_set_active_id (GTK_COMBO_BOX (combo), place);
+
+      g_object_set_data_full (G_OBJECT (combo), TRAY_KEY, g_strdup (l->data), g_free);
+      g_signal_connect (combo, "changed", G_CALLBACK (shopno_qs_dialog_tray_changed_place), settings);
+      gtk_box_pack_end (GTK_BOX (row), combo, FALSE, FALSE, 0);
+
+      gtk_box_pack_start (GTK_BOX (list), row, FALSE, FALSE, 0);
     }
 
   if (ids == NULL)
@@ -284,8 +319,8 @@ shopno_qs_dialog_new (GtkWindow        *parent,
   g_object_bind_property (settings, "night-light-temperature", adjustment, "value", BINDING_FLAGS);
   gtk_grid_attach (GTK_GRID (grid), scale, 1, row++, 1, 1);
 
-  /* Tray icons: the others wait behind ^, as on Windows 11 */
-  label = shopno_qs_dialog_heading_new (_("Tray icons shown on the panel"));
+  /* Tray icons: on the panel or behind ^, as on Windows 11, or not at all */
+  label = shopno_qs_dialog_heading_new (_("Tray icons"));
   gtk_widget_set_margin_top (label, 12);
   gtk_grid_attach (GTK_GRID (grid), label, 0, row++, 2, 1);
   gtk_grid_attach (GTK_GRID (grid), shopno_qs_dialog_tray_apps_new (settings), 0, row++, 2, 1);
@@ -312,7 +347,7 @@ shopno_qs_dialog_new (GtkWindow        *parent,
 
   label = gtk_label_new (NULL);
   gtk_label_set_markup (GTK_LABEL (label),
-                        _("<small>Other icons are behind the ^ button next to them.</small>"));
+                        _("<small>Icons of apps not listed here yet go behind the ^ button.</small>"));
   gtk_label_set_xalign (GTK_LABEL (label), 0.0);
   gtk_widget_set_margin_start (label, 12);
   gtk_style_context_add_class (gtk_widget_get_style_context (label), "dim-label");

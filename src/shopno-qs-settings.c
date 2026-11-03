@@ -24,6 +24,7 @@ enum
   PROP_NIGHT_LIGHT_TEMPERATURE,
   PROP_HIDDEN_TILES,
   PROP_TRAY_PINNED,
+  PROP_TRAY_HIDDEN,
   N_PROPERTIES
 };
 
@@ -36,6 +37,14 @@ struct _ShopnoQsSettings
   guint    night_light_temperature;
   gchar  **hidden_tiles;
   gchar  **tray_pinned;
+  gchar  **tray_hidden;
+};
+
+/* Tray apps that show what the plugin shows already */
+static const gchar * const default_tray_hidden[] =
+{
+  "nm-applet",
+  NULL
 };
 
 static GParamSpec *properties[N_PROPERTIES];
@@ -72,6 +81,10 @@ shopno_qs_settings_get_property (GObject    *object,
 
     case PROP_TRAY_PINNED:
       g_value_set_boxed (value, self->tray_pinned);
+      break;
+
+    case PROP_TRAY_HIDDEN:
+      g_value_set_boxed (value, self->tray_hidden);
       break;
 
     default:
@@ -124,7 +137,6 @@ shopno_qs_settings_set_property (GObject      *object,
       g_strfreev (old);
       if (self->hidden_tiles == NULL)
         self->hidden_tiles = g_new0 (gchar *, 1);
-  self->tray_pinned = g_new0 (gchar *, 1);
       g_object_notify_by_pspec (object, pspec);
       break;
 
@@ -135,6 +147,15 @@ shopno_qs_settings_set_property (GObject      *object,
       g_strfreev (old);
       if (self->tray_pinned == NULL)
         self->tray_pinned = g_new0 (gchar *, 1);
+      g_object_notify_by_pspec (object, pspec);
+      break;
+
+    case PROP_TRAY_HIDDEN:
+      old = self->tray_hidden;
+      self->tray_hidden = g_value_dup_boxed (value);
+      g_strfreev (old);
+      if (self->tray_hidden == NULL)
+        self->tray_hidden = g_new0 (gchar *, 1);
       g_object_notify_by_pspec (object, pspec);
       break;
 
@@ -151,6 +172,7 @@ shopno_qs_settings_finalize (GObject *object)
 {
   g_strfreev (SHOPNO_QS_SETTINGS (object)->hidden_tiles);
   g_strfreev (SHOPNO_QS_SETTINGS (object)->tray_pinned);
+  g_strfreev (SHOPNO_QS_SETTINGS (object)->tray_hidden);
 
   G_OBJECT_CLASS (shopno_qs_settings_parent_class)->finalize (object);
 }
@@ -188,6 +210,11 @@ shopno_qs_settings_class_init (ShopnoQsSettingsClass *klass)
     g_param_spec_boxed ("tray-pinned", NULL, NULL, G_TYPE_STRV,
                         G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
+  /* Saved once changed; until then the default list applies */
+  properties[PROP_TRAY_HIDDEN] =
+    g_param_spec_boxed ("tray-hidden", NULL, NULL, G_TYPE_STRV,
+                        G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (gobject_class, N_PROPERTIES, properties);
 }
 
@@ -199,6 +226,7 @@ shopno_qs_settings_init (ShopnoQsSettings *self)
   self->night_light_temperature = SHOPNO_QS_NIGHT_LIGHT_DEFAULT;
   self->hidden_tiles = g_new0 (gchar *, 1);
   self->tray_pinned = g_new0 (gchar *, 1);
+  self->tray_hidden = g_strdupv ((gchar **) default_tray_hidden);
 }
 
 
@@ -323,4 +351,28 @@ shopno_qs_settings_set_tray_pinned (ShopnoQsSettings *settings,
   g_return_if_fail (id != NULL);
 
   shopno_qs_settings_set_in_list (settings, "tray-pinned", settings->tray_pinned, id, pinned);
+}
+
+
+
+gboolean
+shopno_qs_settings_is_tray_hidden (ShopnoQsSettings *settings,
+                                   const gchar      *id)
+{
+  g_return_val_if_fail (SHOPNO_IS_QS_SETTINGS (settings), FALSE);
+
+  return id != NULL && g_strv_contains ((const gchar * const *) settings->tray_hidden, id);
+}
+
+
+
+void
+shopno_qs_settings_set_tray_hidden (ShopnoQsSettings *settings,
+                                    const gchar      *id,
+                                    gboolean          hidden)
+{
+  g_return_if_fail (SHOPNO_IS_QS_SETTINGS (settings));
+  g_return_if_fail (id != NULL);
+
+  shopno_qs_settings_set_in_list (settings, "tray-hidden", settings->tray_hidden, id, hidden);
 }

@@ -44,7 +44,8 @@ right-click for its menu, scroll to scroll it. Icons of older apps that
 use the XEmbed tray, such as ibus on Xfce, Wine and Java programs, show
 too, drawn and clicked by the app itself. As on Windows 11, new apps wait
 behind a **^** button that opens a small flyout of hidden icons; choose
-which apps show on the panel in Properties.
+which apps show on the panel, or not at all, in Properties. nm-applet's
+icon is not shown by default, since the Wi-Fi tile does its job.
 
 **Tiles**, three to a row. Split tiles have a chevron that opens a page.
 
@@ -63,8 +64,9 @@ which apps show on the panel in Properties.
 
 **Footer.** Battery level and time remaining, and a button for all settings.
 
-**Properties.** Choose which tiles to show, which tray icons show on the
-panel, the Night light color temperature, and background blur.
+**Properties.** Choose which tiles to show, where each tray icon goes (on
+the panel, behind ^, or not shown), the Night light color temperature, and
+background blur.
 
 ## Requirements
 

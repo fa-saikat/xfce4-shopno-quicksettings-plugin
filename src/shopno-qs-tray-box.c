@@ -56,10 +56,12 @@ static gboolean
 shopno_qs_tray_box_wants (ShopnoQsTrayBox  *self,
                           ShopnoQsTrayItem *item)
 {
-  if (!shopno_qs_tray_item_get_visible (item))
+  const gchar *id = shopno_qs_tray_item_get_id (item);
+
+  if (!shopno_qs_tray_item_get_visible (item) || shopno_qs_settings_is_tray_hidden (self->settings, id))
     return FALSE;
 
-  return shopno_qs_settings_is_tray_pinned (self->settings, shopno_qs_tray_item_get_id (item)) == self->pinned;
+  return shopno_qs_settings_is_tray_pinned (self->settings, id) == self->pinned;
 }
 
 
@@ -457,6 +459,7 @@ shopno_qs_tray_box_new (ShopnoQsSettings *settings,
   self->settings = g_object_ref (settings);
   self->pinned = pinned;
   g_signal_connect_swapped (settings, "notify::tray-pinned", G_CALLBACK (shopno_qs_tray_box_update), self);
+  g_signal_connect_swapped (settings, "notify::tray-hidden", G_CALLBACK (shopno_qs_tray_box_update), self);
 
   self->tray = shopno_qs_tray_get_default ();
 
