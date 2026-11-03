@@ -42,13 +42,22 @@ void              shopno_qs_settings_set_tile_hidden (ShopnoQsSettings *settings
                                                       const gchar      *id,
                                                       gboolean          hidden);
 
-/* Tray apps shown on the panel, by their StatusNotifierItem id; the
+/* Tray apps shown on the panel, by their StatusNotifierItem id or
+ * XEmbed window class; the
  * others wait in the overflow flyout, as on Windows 11 */
 gboolean          shopno_qs_settings_is_tray_pinned  (ShopnoQsSettings *settings,
                                                       const gchar      *id);
 void              shopno_qs_settings_set_tray_pinned (ShopnoQsSettings *settings,
                                                       const gchar      *id,
                                                       gboolean          pinned);
+
+/* Tray apps not shown at all, such as nm-applet, whose job the plugin
+ * does. Hidden wins over pinned. */
+gboolean          shopno_qs_settings_is_tray_hidden  (ShopnoQsSettings *settings,
+                                                      const gchar      *id);
+void              shopno_qs_settings_set_tray_hidden (ShopnoQsSettings *settings,
+                                                      const gchar      *id,
+                                                      gboolean          hidden);
 
 G_END_DECLS
 

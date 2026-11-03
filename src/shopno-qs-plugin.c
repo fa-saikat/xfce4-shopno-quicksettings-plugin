@@ -158,6 +158,9 @@ shopno_qs_plugin_load_settings (ShopnoQsPlugin *self)
   shopno_qs_plugin_load_list (self, "tray-pinned");
   g_signal_connect (self->settings, "notify::tray-pinned",
                     G_CALLBACK (shopno_qs_plugin_save_list), self);
+  shopno_qs_plugin_load_list (self, "tray-hidden");
+  g_signal_connect (self->settings, "notify::tray-hidden",
+                    G_CALLBACK (shopno_qs_plugin_save_list), self);
 }
 
 
