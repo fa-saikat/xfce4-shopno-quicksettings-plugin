@@ -33,6 +33,7 @@
 #define PAGE_HEADER_KEY "shopno-qs-page-header"
 
 #define TILE_ID_KEY "shopno-qs-tile-id"
+#define TILE_ABSENT_KEY "shopno-qs-tile-absent"
 
 /* Window roles, matched by the picom rules shipped in extras/picom */
 #define ROLE_PLAIN "shopno-quicksettings"
@@ -189,7 +190,9 @@ shopno_qs_window_update_hidden_tiles (ShopnoQsWindow *self)
     {
       const gchar *id = g_object_get_data (G_OBJECT (l->data), TILE_ID_KEY);
 
-      gtk_widget_set_visible (l->data, !shopno_qs_settings_is_tile_hidden (self->settings, id));
+      gtk_widget_set_visible (l->data,
+                              g_object_get_data (G_OBJECT (l->data), TILE_ABSENT_KEY) == NULL
+                              && !shopno_qs_settings_is_tile_hidden (self->settings, id));
     }
 
   g_list_free (children);
@@ -688,6 +691,25 @@ shopno_qs_window_add_tile (ShopnoQsWindow *window,
   gtk_widget_set_no_show_all (child, TRUE);
   gtk_container_add (GTK_CONTAINER (window->tiles), child);
 
+  shopno_qs_window_update_hidden_tiles (window);
+}
+
+
+
+void
+shopno_qs_window_set_tile_present (ShopnoQsWindow *window,
+                                   GtkWidget      *tile,
+                                   gboolean        present)
+{
+  GtkWidget *child;
+
+  g_return_if_fail (SHOPNO_IS_QS_WINDOW (window));
+  g_return_if_fail (GTK_IS_WIDGET (tile));
+
+  child = gtk_widget_get_parent (tile);
+  g_return_if_fail (child != NULL && gtk_widget_get_parent (child) == window->tiles);
+
+  g_object_set_data (G_OBJECT (child), TILE_ABSENT_KEY, present ? NULL : GINT_TO_POINTER (TRUE));
   shopno_qs_window_update_hidden_tiles (window);
 }
 

@@ -4,6 +4,7 @@ src/shopno-qs-bluetooth-ui.c
 src/shopno-qs-brightness.c
 src/shopno-qs-dialog.c
 src/shopno-qs-dnd.c
+src/shopno-qs-ethernet.c
 src/shopno-qs-footer.c
 src/shopno-qs-night-light.c
 src/shopno-qs-overflow.c

@@ -13,7 +13,7 @@
  */
 
 /*
- * Wi-Fi and the primary connection through libnm.
+ * Wi-Fi, wired devices and the primary connection through libnm.
  *
  * There is no secret agent: new networks get their password from the
  * flyout, and NetworkManager stores it with the connection. When a saved
@@ -42,6 +42,7 @@ struct _ShopnoQsNetwork
   GCancellable  *cancellable;
   NMDeviceWifi  *wifi;
   NMAccessPoint *active_ap;
+  GPtrArray     *wired;
 
   gchar         *active_ssid;
   gchar         *connecting_ssid;
@@ -420,6 +421,51 @@ shopno_qs_network_device_state_changed (NMDevice        *device,
 
 
 
+/* Physical Ethernet ports; virtual pairs of containers are not ports */
+static gboolean
+shopno_qs_network_is_wired (NMDevice *device)
+{
+  if (!NM_IS_DEVICE_ETHERNET (device))
+    return FALSE;
+
+#if NM_CHECK_VERSION (1, 30, 0)
+  if (NM_IS_DEVICE_VETH (device))
+    return FALSE;
+#endif
+
+  return TRUE;
+}
+
+
+
+static void
+shopno_qs_network_update_wired (ShopnoQsNetwork *self)
+{
+  const GPtrArray *devices;
+
+  for (guint i = 0; i < self->wired->len; i++)
+    g_signal_handlers_disconnect_by_data (g_ptr_array_index (self->wired, i), self);
+  g_ptr_array_set_size (self->wired, 0);
+
+  if (self->client == NULL || !nm_client_get_nm_running (self->client))
+    return;
+
+  devices = nm_client_get_devices (self->client);
+  for (guint i = 0; i < devices->len; i++)
+    {
+      NMDevice *device = g_ptr_array_index (devices, i);
+
+      if (!shopno_qs_network_is_wired (device))
+        continue;
+
+      g_ptr_array_add (self->wired, g_object_ref (device));
+      g_signal_connect_swapped (device, "notify::" NM_DEVICE_STATE,
+                                G_CALLBACK (shopno_qs_network_schedule_changed), self);
+    }
+}
+
+
+
 static void
 shopno_qs_network_update_device (ShopnoQsNetwork *self)
 {
@@ -463,6 +509,7 @@ shopno_qs_network_update_device (ShopnoQsNetwork *self)
         }
     }
 
+  shopno_qs_network_update_wired (self);
   shopno_qs_network_update_state (self);
 }
 
@@ -780,6 +827,13 @@ shopno_qs_network_dispose (GObject *object)
       g_clear_object (&self->wifi);
     }
 
+  if (self->wired != NULL)
+    {
+      for (guint i = 0; i < self->wired->len; i++)
+        g_signal_handlers_disconnect_by_data (g_ptr_array_index (self->wired, i), self);
+      g_clear_pointer (&self->wired, g_ptr_array_unref);
+    }
+
   if (self->client != NULL)
     {
       g_signal_handlers_disconnect_by_data (self->client, self);
@@ -837,8 +891,35 @@ shopno_qs_network_init (ShopnoQsNetwork *self)
 {
   self->cancellable = g_cancellable_new ();
   self->networks = g_ptr_array_new_with_free_func (shopno_qs_network_free_network);
+  self->wired = g_ptr_array_new_with_free_func (g_object_unref);
 
   nm_client_new_async (self->cancellable, shopno_qs_network_client_ready, self);
+}
+
+
+
+static void
+shopno_qs_network_wired_activated (GObject      *source,
+                                   GAsyncResult *result,
+                                   gpointer      data)
+{
+  GError             *error = NULL;
+  NMActiveConnection *active;
+
+  if (data != NULL)
+    active = nm_client_add_and_activate_connection_finish (NM_CLIENT (source), result, &error);
+  else
+    active = nm_client_activate_connection_finish (NM_CLIENT (source), result, &error);
+
+  if (active != NULL)
+    {
+      g_object_unref (active);
+      return;
+    }
+
+  if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+    g_warning ("Failed to connect Ethernet: %s", error->message);
+  g_error_free (error);
 }
 
 
@@ -1084,4 +1165,74 @@ shopno_qs_network_refresh (ShopnoQsNetwork *network)
       network->networks_id = 0;
     }
   shopno_qs_network_emit_networks_changed (network);
+}
+
+
+
+ShopnoQsWiredState
+shopno_qs_network_get_wired_state (ShopnoQsNetwork *network)
+{
+  ShopnoQsWiredState state = SHOPNO_QS_WIRED_NONE;
+
+  g_return_val_if_fail (SHOPNO_IS_QS_NETWORK (network), SHOPNO_QS_WIRED_NONE);
+
+  /* The furthest along of all ports */
+  for (guint i = 0; i < network->wired->len; i++)
+    {
+      NMDeviceState      device_state = nm_device_get_state (g_ptr_array_index (network->wired, i));
+      ShopnoQsWiredState this_state;
+
+      if (device_state == NM_DEVICE_STATE_ACTIVATED)
+        this_state = SHOPNO_QS_WIRED_CONNECTED;
+      else if (device_state >= NM_DEVICE_STATE_PREPARE && device_state < NM_DEVICE_STATE_ACTIVATED)
+        this_state = SHOPNO_QS_WIRED_CONNECTING;
+      else if (device_state >= NM_DEVICE_STATE_DISCONNECTED)
+        this_state = SHOPNO_QS_WIRED_DISCONNECTED;
+      else if (device_state == NM_DEVICE_STATE_UNAVAILABLE)
+        this_state = SHOPNO_QS_WIRED_UNPLUGGED;
+      else
+        continue;
+
+      state = MAX (state, this_state);
+    }
+
+  return state;
+}
+
+
+
+void
+shopno_qs_network_set_wired_connected (ShopnoQsNetwork *network,
+                                       gboolean         connected)
+{
+  g_return_if_fail (SHOPNO_IS_QS_NETWORK (network));
+
+  if (network->client == NULL)
+    return;
+
+  for (guint i = 0; i < network->wired->len; i++)
+    {
+      NMDevice     *device = g_ptr_array_index (network->wired, i);
+      NMDeviceState state = nm_device_get_state (device);
+
+      if (!connected)
+        {
+          /* NetworkManager then keeps the port down until asked again */
+          if (state >= NM_DEVICE_STATE_PREPARE && state <= NM_DEVICE_STATE_ACTIVATED)
+            nm_device_disconnect_async (device, NULL, shopno_qs_network_disconnect_done, NULL);
+        }
+      else if (state == NM_DEVICE_STATE_DISCONNECTED || state == NM_DEVICE_STATE_FAILED)
+        {
+          /* The best saved connection, or a new one if there is none */
+          if (nm_device_get_available_connections (device)->len > 0)
+            nm_client_activate_connection_async (network->client, NULL, device, NULL,
+                                                 network->cancellable,
+                                                 shopno_qs_network_wired_activated, NULL);
+          else
+            nm_client_add_and_activate_connection_async (network->client, NULL, device, NULL,
+                                                         network->cancellable,
+                                                         shopno_qs_network_wired_activated,
+                                                         GINT_TO_POINTER (TRUE));
+        }
+    }
 }
