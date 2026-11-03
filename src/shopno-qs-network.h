@@ -38,6 +38,16 @@ typedef struct
   gboolean              known;
 } ShopnoQsWifiNetwork;
 
+/* All wired ports together: the furthest along of them */
+typedef enum
+{
+  SHOPNO_QS_WIRED_NONE,          /* No Ethernet port, or none managed */
+  SHOPNO_QS_WIRED_UNPLUGGED,     /* No cable */
+  SHOPNO_QS_WIRED_DISCONNECTED,
+  SHOPNO_QS_WIRED_CONNECTING,
+  SHOPNO_QS_WIRED_CONNECTED,
+} ShopnoQsWiredState;
+
 /* Shared by the flyout and the panel button. Returns a new reference. */
 ShopnoQsNetwork *shopno_qs_network_get_default       (void);
 
@@ -68,6 +78,13 @@ void             shopno_qs_network_connect            (ShopnoQsNetwork *network,
                                                        const gchar     *ssid,
                                                        const gchar     *password);
 void             shopno_qs_network_disconnect         (ShopnoQsNetwork *network);
+
+ShopnoQsWiredState shopno_qs_network_get_wired_state   (ShopnoQsNetwork *network);
+
+/* Connects every plugged-in port, or disconnects every port. A port
+ * disconnected this way stays down until it is connected again. */
+void             shopno_qs_network_set_wired_connected (ShopnoQsNetwork *network,
+                                                        gboolean         connected);
 
 /* An icon name for the primary connection, for the panel button */
 const gchar     *shopno_qs_network_get_icon_name      (ShopnoQsNetwork *network);

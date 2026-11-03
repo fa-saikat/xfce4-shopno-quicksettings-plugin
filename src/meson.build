@@ -33,6 +33,7 @@ shopno_qs_core = static_library(
     'shopno-qs-dialog.c',
     'shopno-qs-features.c',
     'shopno-qs-dnd.c',
+    'shopno-qs-ethernet.c',
     'shopno-qs-footer.c',
     'shopno-qs-gamma.c',
     'shopno-qs-network.c',

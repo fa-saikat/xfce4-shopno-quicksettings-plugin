@@ -8,9 +8,9 @@
 </p>
 
 A Windows 11-style quick settings flyout and system tray for the Xfce panel:
-Wi-Fi, Bluetooth, Do not disturb, Night light, brightness, volume and battery
-in one place, behind one set of icons on the panel, with other apps' tray
-icons next to them.
+Wi-Fi, Ethernet, Bluetooth, Do not disturb, Night light, brightness,
+volume and battery in one place, behind one set of icons on the panel,
+with other apps' tray icons next to them.
 
 <a href="#features">Features</a> ·
 <a href="#requirements">Requirements</a> ·
@@ -49,6 +49,9 @@ choose which apps show on the panel in Properties.
 - **Wi-Fi**: turns the radio on or off and shows the network you are
   connected to. Its page lists networks in range; click one to connect,
   type the password in place for a new one, or disconnect.
+- **Ethernet**: shown while a cable is plugged in. Click it to disconnect,
+  and again to connect. A disconnected cable stays off until you connect it
+  again.
 - **Bluetooth**: turns the adapter on or off, lifting an rfkill block if
   needed. Its page lists paired devices; click one to connect or disconnect.
 - **Do not disturb**: holds back notification popups from xfce4-notifyd.
