@@ -40,9 +40,11 @@ taskbar. Scroll on it to change the volume; hover for a summary.
 **System tray.** Tray icons of other apps, such as ibus, qBittorrent or
 Telegram, sit left of the panel button, so Xfce's System Tray plugin is not
 needed. Click an icon to open the app, middle-click for its second action,
-right-click for its menu, scroll to scroll it. As on Windows 11, new apps
-wait behind a **^** button that opens a small flyout of hidden icons;
-choose which apps show on the panel in Properties.
+right-click for its menu, scroll to scroll it. Icons of older apps that
+use the XEmbed tray, such as ibus on Xfce, Wine and Java programs, show
+too, drawn and clicked by the app itself. As on Windows 11, new apps wait
+behind a **^** button that opens a small flyout of hidden icons; choose
+which apps show on the panel in Properties.
 
 **Tiles**, three to a row. Split tiles have a chevron that opens a page.
 
@@ -78,7 +80,8 @@ missing is greyed out with a tooltip saying why.
 | Battery         | UPower                                                             |
 | Do not disturb  | xfce4-notifyd                                                      |
 | Night light     | An X11 session with XRandR                                         |
-| Tray icons      | Apps that use StatusNotifierItem (KDE/AppIndicator tray icons)     |
+| Tray icons      | Apps that use StatusNotifierItem (KDE/AppIndicator tray icons), or |
+|                 | the older XEmbed tray on X11                                       |
 
 The **More … settings** links open nm-connection-editor, blueman-manager,
 pavucontrol, xfce4-power-manager-settings and xfce4-settings-manager when
@@ -198,9 +201,9 @@ are in
   supported.
 - **Night light and redshift** both set the gamma ramps; use one of them.
 - **No tile editing in the flyout.** Choose tiles in Properties instead.
-- **No XEmbed tray icons yet.** A few older programs (some Wine, Java and
-  GTK 2 apps) use the older XEmbed tray instead of StatusNotifierItem; their
-  icons do not show yet ([#51](https://github.com/fa-saikat/xfce4-shopno-quicksettings-plugin/issues/51)).
+- **XEmbed icons are the app's own.** Older apps draw and handle their
+  icons themselves, so these do not light up on hover, and Escape does not
+  close the ^ flyout while the pointer is on one of them.
 - **No dragging of tray icons.** Choose which show on the panel in
   Properties.
 - **Borrowed icon.** It uses the ShopnoOS logo until it has one of its own.
@@ -227,9 +230,10 @@ Shopno Quick Settings builds on:
   [PulseAudio](https://www.freedesktop.org/wiki/Software/PulseAudio/) and
   [PipeWire](https://pipewire.org/), [UPower](https://upower.freedesktop.org/),
   systemd-logind and xfce4-notifyd.
-- The system tray follows the StatusNotifierItem code of Xfce's
+- The system tray follows the code of Xfce's
   [systray plugin](https://gitlab.xfce.org/xfce/xfce4-panel/-/tree/master/plugins/systray)
-  by Viktor Odintsev (GPL-2.0-or-later), and uses
+  (GPL-2.0-or-later): its StatusNotifierItem part by Viktor Odintsev, and
+  its XEmbed part by Anders Carlsson, Vincent Untz and Nick Schermer. It uses
   [libdbusmenu](https://launchpad.net/libdbusmenu) for apps' menus.
 - Projects it learned from: [network-manager-applet](https://gitlab.gnome.org/GNOME/network-manager-applet),
   [xfce4-pulseaudio-plugin](https://gitlab.xfce.org/panel-plugins/xfce4-pulseaudio-plugin),

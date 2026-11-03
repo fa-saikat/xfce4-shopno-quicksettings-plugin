@@ -23,7 +23,10 @@
 
 #include "config.h"
 
+#include <gdk/gdkx.h>
 #include <libdbusmenu-gtk/menu.h>
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
 
 #include "shopno-qs-tray-item.h"
 
@@ -64,6 +67,10 @@ struct _ShopnoQsTrayItem
   gboolean         item_is_menu;
   GtkWidget       *menu;
   gchar           *menu_built_for;
+
+  /* XEmbed icons: the app's window, and the tray box showing it */
+  gulong           xembed_window;
+  gpointer         xembed_host;
 };
 
 static guint signals[N_SIGNALS];
@@ -420,6 +427,115 @@ shopno_qs_tray_item_new (const gchar *key,
     }
 
   return self;
+}
+
+
+
+/* A window property as UTF-8, or NULL */
+static gchar *
+shopno_qs_tray_item_get_window_text (Display     *xdisplay,
+                                     Window       window,
+                                     const gchar *property)
+{
+  GdkDisplay    *display = gdk_display_get_default ();
+  XTextProperty  text = { 0 };
+  gchar        **list = NULL;
+  gchar         *result = NULL;
+  gint           count = 0;
+
+  gdk_x11_display_error_trap_push (display);
+  if (XGetTextProperty (xdisplay, window, &text,
+                        gdk_x11_get_xatom_by_name_for_display (display, property)) != 0
+      && text.value != NULL && text.nitems > 0)
+    {
+      if (text.encoding == gdk_x11_get_xatom_by_name_for_display (display, "UTF8_STRING"))
+        result = g_strndup ((const gchar *) text.value, text.nitems);
+      else if (Xutf8TextPropertyToTextList (xdisplay, &text, &list, &count) >= Success
+               && count > 0 && list != NULL)
+        result = g_strdup (list[0]);
+    }
+  gdk_x11_display_error_trap_pop_ignored (display);
+
+  if (list != NULL)
+    XFreeStringList (list);
+  if (text.value != NULL)
+    XFree (text.value);
+
+  if (result != NULL && (!g_utf8_validate (result, -1, NULL) || *result == '\0'))
+    g_clear_pointer (&result, g_free);
+
+  return result;
+}
+
+
+
+ShopnoQsTrayItem *
+shopno_qs_tray_item_new_xembed (gulong window)
+{
+  ShopnoQsTrayItem *self = g_object_new (SHOPNO_TYPE_QS_TRAY_ITEM, NULL);
+  GdkDisplay       *display = gdk_display_get_default ();
+  Display          *xdisplay = GDK_DISPLAY_XDISPLAY (display);
+  XClassHint        hint = { NULL, NULL };
+
+  self->key = g_strdup_printf ("xembed:%lu", window);
+  self->xembed_window = window;
+  self->ready = TRUE;
+
+  /* The id is the program's class, which stays the same across restarts;
+   * the title its name for the icon, such as "IBus" */
+  gdk_x11_display_error_trap_push (display);
+  if (XGetClassHint (xdisplay, window, &hint) != 0)
+    {
+      if (hint.res_class != NULL && *hint.res_class != '\0')
+        self->id = g_utf8_strdown (hint.res_class, -1);
+      else if (hint.res_name != NULL && *hint.res_name != '\0')
+        self->id = g_utf8_strdown (hint.res_name, -1);
+    }
+  gdk_x11_display_error_trap_pop_ignored (display);
+  if (hint.res_name != NULL)
+    XFree (hint.res_name);
+  if (hint.res_class != NULL)
+    XFree (hint.res_class);
+
+  self->title = shopno_qs_tray_item_get_window_text (xdisplay, window, "_NET_WM_NAME");
+  if (self->title == NULL)
+    self->title = shopno_qs_tray_item_get_window_text (xdisplay, window, "WM_NAME");
+
+  if (self->id == NULL)
+    self->id = self->title != NULL ? g_utf8_strdown (self->title, -1) : g_strdup (self->key);
+
+  return self;
+}
+
+
+
+gulong
+shopno_qs_tray_item_get_xembed_window (ShopnoQsTrayItem *item)
+{
+  g_return_val_if_fail (SHOPNO_IS_QS_TRAY_ITEM (item), 0);
+
+  return item->xembed_window;
+}
+
+
+
+gpointer
+shopno_qs_tray_item_get_xembed_host (ShopnoQsTrayItem *item)
+{
+  g_return_val_if_fail (SHOPNO_IS_QS_TRAY_ITEM (item), NULL);
+
+  return item->xembed_host;
+}
+
+
+
+void
+shopno_qs_tray_item_set_xembed_host (ShopnoQsTrayItem *item,
+                                     gpointer          host)
+{
+  g_return_if_fail (SHOPNO_IS_QS_TRAY_ITEM (item));
+
+  item->xembed_host = host;
 }
 
 

@@ -25,6 +25,10 @@
 #define GRAB_RETRY_INTERVAL 50
 #define GRAB_MAX_RETRIES    10
 
+/* Off an XEmbed icon, the pointer may leave the flyout without crossing
+ * it, so watch where it goes */
+#define POINTER_POLL_INTERVAL 100
+
 enum
 {
   CHANGED,
@@ -41,6 +45,9 @@ struct _ShopnoQsOverflow
   GdkSeat   *grab_seat;
   guint      grab_retry_id;
   guint      grab_retries;
+  gboolean   regrab;
+  gboolean   over_socket;
+  guint      pointer_poll_id;
   gint       x, y;
 };
 
@@ -61,10 +68,12 @@ shopno_qs_overflow_try_grab (gpointer data)
     {
       self->grab_seat = seat;
       self->grab_retry_id = 0;
+      self->regrab = FALSE;
       return G_SOURCE_REMOVE;
     }
 
-  if (++self->grab_retries >= GRAB_MAX_RETRIES)
+  /* Taking it back from an XEmbed icon's menu waits until that closes */
+  if (++self->grab_retries >= GRAB_MAX_RETRIES && !self->regrab)
     {
       self->grab_retry_id = 0;
       return G_SOURCE_REMOVE;
@@ -114,21 +123,90 @@ shopno_qs_overflow_icon_activated (ShopnoQsOverflow *self)
 
 
 
+/* Take the grab again, so a click outside still closes the flyout */
 static void
-shopno_qs_overflow_icon_menu_dismissed (ShopnoQsOverflow *self)
+shopno_qs_overflow_regrab (ShopnoQsOverflow *self,
+                           gboolean          wait)
 {
-  if (!gtk_widget_get_visible (GTK_WIDGET (self)))
-    return;
-
-  /* The menu's grab replaced ours and ended with it; take it back so a
-   * click outside still closes the flyout */
   if (self->grab_retry_id != 0)
     g_source_remove (self->grab_retry_id);
   self->grab_seat = NULL;
   self->grab_retries = 0;
   self->grab_retry_id = 0;
+  self->regrab = wait;
   if (shopno_qs_overflow_try_grab (self) == G_SOURCE_CONTINUE)
     self->grab_retry_id = g_timeout_add (GRAB_RETRY_INTERVAL, shopno_qs_overflow_try_grab, self);
+}
+
+
+
+static void
+shopno_qs_overflow_icon_menu_dismissed (ShopnoQsOverflow *self)
+{
+  /* The menu's grab replaced ours and ended with it */
+  if (gtk_widget_get_visible (GTK_WIDGET (self)))
+    shopno_qs_overflow_regrab (self, FALSE);
+}
+
+
+
+static void shopno_qs_overflow_pointer_moved (ShopnoQsOverflow *self,
+                                              gdouble           x_root,
+                                              gdouble           y_root);
+
+
+
+static gboolean
+shopno_qs_overflow_poll_pointer (gpointer data)
+{
+  ShopnoQsOverflow *self = data;
+  GdkDevice        *pointer;
+  gint              x, y;
+
+  pointer = gdk_seat_get_pointer (gdk_display_get_default_seat (gtk_widget_get_display (data)));
+  gdk_device_get_position (pointer, NULL, &x, &y);
+
+  if (shopno_qs_tray_box_socket_at (SHOPNO_QS_TRAY_BOX (self->box), x, y))
+    return G_SOURCE_CONTINUE;
+
+  self->pointer_poll_id = 0;
+  shopno_qs_overflow_pointer_moved (self, x, y);
+
+  return G_SOURCE_REMOVE;
+}
+
+
+
+/* An XEmbed icon gets its clicks straight from the X server, which the
+ * grab would take: let go while the pointer is over one. Its menu then
+ * grabs the pointer itself, until it closes. */
+static void
+shopno_qs_overflow_pointer_moved (ShopnoQsOverflow *self,
+                                  gdouble           x_root,
+                                  gdouble           y_root)
+{
+  gboolean over = self->box != NULL
+                  && shopno_qs_tray_box_socket_at (SHOPNO_QS_TRAY_BOX (self->box), x_root, y_root);
+
+  if (over == self->over_socket)
+    return;
+
+  self->over_socket = over;
+  if (over)
+    {
+      shopno_qs_overflow_ungrab (self);
+      if (self->pointer_poll_id == 0)
+        self->pointer_poll_id = g_timeout_add (POINTER_POLL_INTERVAL, shopno_qs_overflow_poll_pointer, self);
+    }
+  else
+    {
+      if (self->pointer_poll_id != 0)
+        {
+          g_source_remove (self->pointer_poll_id);
+          self->pointer_poll_id = 0;
+        }
+      shopno_qs_overflow_regrab (self, TRUE);
+    }
 }
 
 
@@ -161,6 +239,13 @@ shopno_qs_overflow_hide (GtkWidget *widget)
   ShopnoQsOverflow *self = SHOPNO_QS_OVERFLOW (widget);
 
   shopno_qs_overflow_ungrab (self);
+  self->over_socket = FALSE;
+  self->regrab = FALSE;
+  if (self->pointer_poll_id != 0)
+    {
+      g_source_remove (self->pointer_poll_id);
+      self->pointer_poll_id = 0;
+    }
 
   /* The pointer may be on an icon, which would never see it leave */
   if (self->box != NULL)
@@ -199,6 +284,28 @@ shopno_qs_overflow_button_press_event (GtkWidget      *widget,
 
 
 static gboolean
+shopno_qs_overflow_motion_notify_event (GtkWidget      *widget,
+                                        GdkEventMotion *event)
+{
+  shopno_qs_overflow_pointer_moved (SHOPNO_QS_OVERFLOW (widget), event->x_root, event->y_root);
+
+  return GTK_WIDGET_CLASS (shopno_qs_overflow_parent_class)->motion_notify_event (widget, event);
+}
+
+
+
+static gboolean
+shopno_qs_overflow_enter_notify_event (GtkWidget        *widget,
+                                       GdkEventCrossing *event)
+{
+  shopno_qs_overflow_pointer_moved (SHOPNO_QS_OVERFLOW (widget), event->x_root, event->y_root);
+
+  return GTK_WIDGET_CLASS (shopno_qs_overflow_parent_class)->enter_notify_event (widget, event);
+}
+
+
+
+static gboolean
 shopno_qs_overflow_key_press_event (GtkWidget   *widget,
                                     GdkEventKey *event)
 {
@@ -217,8 +324,11 @@ static gboolean
 shopno_qs_overflow_focus_out_event (GtkWidget     *widget,
                                     GdkEventFocus *event)
 {
-  /* Fallback for when the grab failed */
-  if (SHOPNO_QS_OVERFLOW (widget)->grab_seat == NULL)
+  ShopnoQsOverflow *self = SHOPNO_QS_OVERFLOW (widget);
+
+  /* Fallback for when the grab failed, but not while an XEmbed icon or
+   * its menu has the pointer */
+  if (self->grab_seat == NULL && !self->over_socket && !self->regrab)
     gtk_widget_hide (widget);
 
   return GTK_WIDGET_CLASS (shopno_qs_overflow_parent_class)->focus_out_event (widget, event);
@@ -247,7 +357,14 @@ shopno_qs_overflow_window_state_event (GtkWidget           *widget,
 static void
 shopno_qs_overflow_dispose (GObject *object)
 {
-  shopno_qs_overflow_ungrab (SHOPNO_QS_OVERFLOW (object));
+  ShopnoQsOverflow *self = SHOPNO_QS_OVERFLOW (object);
+
+  shopno_qs_overflow_ungrab (self);
+  if (self->pointer_poll_id != 0)
+    {
+      g_source_remove (self->pointer_poll_id);
+      self->pointer_poll_id = 0;
+    }
 
   G_OBJECT_CLASS (shopno_qs_overflow_parent_class)->dispose (object);
 }
@@ -266,6 +383,8 @@ shopno_qs_overflow_class_init (ShopnoQsOverflowClass *klass)
   widget_class->hide = shopno_qs_overflow_hide;
   widget_class->button_press_event = shopno_qs_overflow_button_press_event;
   widget_class->key_press_event = shopno_qs_overflow_key_press_event;
+  widget_class->motion_notify_event = shopno_qs_overflow_motion_notify_event;
+  widget_class->enter_notify_event = shopno_qs_overflow_enter_notify_event;
   widget_class->focus_out_event = shopno_qs_overflow_focus_out_event;
   widget_class->window_state_event = shopno_qs_overflow_window_state_event;
 
@@ -291,7 +410,8 @@ shopno_qs_overflow_init (ShopnoQsOverflow *self)
   gtk_window_set_keep_above (window, TRUE);
   gtk_window_stick (window);
   gtk_window_set_type_hint (window, GDK_WINDOW_TYPE_HINT_MENU);
-  gtk_widget_add_events (GTK_WIDGET (self), GDK_BUTTON_PRESS_MASK);
+  gtk_widget_add_events (GTK_WIDGET (self), GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK
+                                            | GDK_ENTER_NOTIFY_MASK);
   gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (self)), "shopno-qs-window");
 
   /* Rounded like the quick settings flyout when composited */

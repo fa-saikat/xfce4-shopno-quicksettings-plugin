@@ -27,7 +27,19 @@ ShopnoQsTrayItem *shopno_qs_tray_item_new             (const gchar      *key,
                                                        const gchar      *bus_name,
                                                        const gchar      *object_path);
 
+/* An XEmbed icon: the app draws into this window itself, so only the
+ * id, title and window are known */
+ShopnoQsTrayItem *shopno_qs_tray_item_new_xembed      (gulong            window);
+
 const gchar      *shopno_qs_tray_item_get_key         (ShopnoQsTrayItem *item);
+
+/* The icon's window for an XEmbed icon, 0 for a StatusNotifierItem */
+gulong            shopno_qs_tray_item_get_xembed_window (ShopnoQsTrayItem *item);
+
+/* The tray box holding an XEmbed icon: its window fits in one place */
+gpointer          shopno_qs_tray_item_get_xembed_host (ShopnoQsTrayItem *item);
+void              shopno_qs_tray_item_set_xembed_host (ShopnoQsTrayItem *item,
+                                                       gpointer          host);
 
 /* The app's id, stable across restarts; NULL until the item is ready */
 const gchar      *shopno_qs_tray_item_get_id          (ShopnoQsTrayItem *item);
