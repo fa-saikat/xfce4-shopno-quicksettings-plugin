@@ -1,5 +1,5 @@
 Name:           xfce4-shopno-quicksettings-plugin
-Version:        0.2.0
+Version:        0.3.0
 Release:        1%{?dist}
 Summary:        Windows 11 style quick settings for the Xfce panel
 
@@ -67,6 +67,15 @@ icon theme.
 %{_datadir}/icons/hicolor/scalable/apps/shopno-quicksettings.svg
 
 %changelog
+* Wed Nov 04 2026 FA Saikat <fahimabrar.saikat@gmail.com> - 0.3.0-1
+- Tray icons of older apps that use the XEmbed tray, such as ibus on
+  Xfce, Wine and Java programs
+- Each tray app can be shown on the panel, behind ^, or not at all;
+  nm-applet is not shown by default
+- Ethernet tile to disconnect or connect a wired connection, shown while
+  a cable is plugged in
+- Hiding a tile no longer unpins tray icons until the panel restarts
+
 * Tue Nov 03 2026 FA Saikat <fahimabrar.saikat@gmail.com> - 0.2.0-1
 - System tray: other apps' StatusNotifierItem icons next to the quick
   settings button, with their menus; replaces Xfce's System Tray plugin
