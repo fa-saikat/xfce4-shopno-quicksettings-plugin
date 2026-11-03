@@ -1,3 +1,15 @@
+xfce4-shopno-quicksettings-plugin (0.3.0-1) unstable; urgency=medium
+
+  * Tray icons of older apps that use the XEmbed tray, such as ibus on
+    Xfce, Wine and Java programs.
+  * Each tray app can be shown on the panel, behind ^, or not at all;
+    nm-applet is not shown by default.
+  * Ethernet tile to disconnect or connect a wired connection, shown while
+    a cable is plugged in.
+  * Hiding a tile no longer unpins tray icons until the panel restarts.
+
+ -- FA Saikat <fahimabrar.saikat@gmail.com>  Wed, 04 Nov 2026 12:00:00 +0600
+
 xfce4-shopno-quicksettings-plugin (0.2.0-1) unstable; urgency=medium
 
   * System tray: other apps' StatusNotifierItem icons next to the quick
