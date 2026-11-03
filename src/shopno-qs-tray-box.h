@@ -45,6 +45,12 @@ guint      shopno_qs_tray_box_get_n_shown   (ShopnoQsTrayBox  *box);
  * pointer over an icon */
 void       shopno_qs_tray_box_reset_icons   (ShopnoQsTrayBox  *box);
 
+/* Whether an XEmbed icon is at this point: its app takes clicks on it
+ * straight from the X server */
+gboolean   shopno_qs_tray_box_socket_at     (ShopnoQsTrayBox  *box,
+                                             gint              x_root,
+                                             gint              y_root);
+
 G_END_DECLS
 
 #endif /* !__SHOPNO_QS_TRAY_BOX_H__ */
