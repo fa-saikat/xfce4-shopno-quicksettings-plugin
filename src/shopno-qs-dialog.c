@@ -294,7 +294,7 @@ shopno_qs_dialog_new (GtkWindow        *parent,
   {
     ShopnoQsTray *tray = shopno_qs_tray_get_default ();
 
-    if (!shopno_qs_tray_get_owns_watcher (tray))
+    if (!shopno_qs_tray_get_owns_watcher (tray) || !shopno_qs_tray_get_owns_xembed (tray))
       {
         GtkWidget *warning = gtk_label_new (_("Another tray, such as Xfce's System Tray plugin, is running. "
                                               "Remove it from the panel to avoid showing these icons twice."));

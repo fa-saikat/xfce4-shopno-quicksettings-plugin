@@ -28,6 +28,7 @@
 #include <unistd.h>
 
 #include "shopno-qs-tray.h"
+#include "shopno-qs-xembed.h"
 
 #define WATCHER_NAME  "org.kde.StatusNotifierWatcher"
 #define WATCHER_PATH  "/StatusNotifierWatcher"
@@ -75,6 +76,9 @@ struct _ShopnoQsTray
   guint            registered_id;
   guint            unregistered_id;
   GPtrArray       *items;
+
+  /* Older apps' XEmbed icons */
+  ShopnoQsXembed  *xembed;
 };
 
 static guint         signals[N_SIGNALS];
@@ -164,11 +168,37 @@ shopno_qs_tray_remove (ShopnoQsTray *self,
 
 
 
+/* The StatusNotifierItems, or with xembed TRUE, all items */
 static void
-shopno_qs_tray_clear (ShopnoQsTray *self)
+shopno_qs_tray_clear (ShopnoQsTray *self,
+                      gboolean      xembed)
 {
-  while (self->items->len > 0)
-    shopno_qs_tray_remove (self, shopno_qs_tray_item_get_key (g_ptr_array_index (self->items, 0)));
+  for (guint i = self->items->len; i > 0; i--)
+    {
+      ShopnoQsTrayItem *item = g_ptr_array_index (self->items, i - 1);
+
+      if (xembed || shopno_qs_tray_item_get_xembed_window (item) == 0)
+        shopno_qs_tray_remove (self, shopno_qs_tray_item_get_key (item));
+    }
+}
+
+
+
+static void
+shopno_qs_tray_xembed_dock (ShopnoQsTray *self,
+                            gulong        window)
+{
+  ShopnoQsTrayItem *item;
+  gchar            *key = g_strdup_printf ("xembed:%lu", window);
+
+  if (shopno_qs_tray_find (self, key) == NULL)
+    {
+      item = shopno_qs_tray_item_new_xembed (window);
+      g_ptr_array_add (self->items, item);
+      g_signal_emit (self, signals[ITEM_ADDED], 0, item);
+    }
+
+  g_free (key);
 }
 
 
@@ -273,7 +303,7 @@ shopno_qs_tray_watcher_vanished (GDBusConnection *connection,
     }
 
   /* Items register again with the next watcher */
-  shopno_qs_tray_clear (self);
+  shopno_qs_tray_clear (self, FALSE);
 }
 
 
@@ -549,6 +579,13 @@ shopno_qs_tray_dispose (GObject *object)
 
   g_clear_object (&self->bus);
 
+  shopno_qs_tray_clear (self, TRUE);
+  if (self->xembed != NULL)
+    {
+      g_signal_handlers_disconnect_by_data (self->xembed, self);
+      g_clear_object (&self->xembed);
+    }
+
   G_OBJECT_CLASS (shopno_qs_tray_parent_class)->dispose (object);
 }
 
@@ -596,6 +633,10 @@ shopno_qs_tray_init (ShopnoQsTray *self)
   self->cancellable = g_cancellable_new ();
   self->items = g_ptr_array_new_with_free_func (g_object_unref);
   self->watched = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, shopno_qs_tray_unwatch);
+
+  self->xembed = shopno_qs_xembed_new ();
+  if (self->xembed != NULL)
+    g_signal_connect_swapped (self->xembed, "dock", G_CALLBACK (shopno_qs_tray_xembed_dock), self);
 
   self->bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, NULL);
   if (self->bus == NULL)
@@ -653,4 +694,25 @@ shopno_qs_tray_get_owns_watcher (ShopnoQsTray *tray)
   g_return_val_if_fail (SHOPNO_IS_QS_TRAY (tray), FALSE);
 
   return tray->owns_watcher;
+}
+
+
+
+gboolean
+shopno_qs_tray_get_owns_xembed (ShopnoQsTray *tray)
+{
+  g_return_val_if_fail (SHOPNO_IS_QS_TRAY (tray), FALSE);
+
+  return tray->xembed != NULL && shopno_qs_xembed_get_owns (tray->xembed);
+}
+
+
+
+void
+shopno_qs_tray_remove_item (ShopnoQsTray     *tray,
+                            ShopnoQsTrayItem *item)
+{
+  g_return_if_fail (SHOPNO_IS_QS_TRAY (tray));
+
+  shopno_qs_tray_remove (tray, shopno_qs_tray_item_get_key (item));
 }

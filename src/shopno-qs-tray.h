@@ -33,6 +33,13 @@ GPtrArray    *shopno_qs_tray_get_items   (ShopnoQsTray *tray);
  * the watcher: its icons then show in both trays */
 gboolean      shopno_qs_tray_get_owns_watcher (ShopnoQsTray *tray);
 
+/* The same for the XEmbed tray of older apps */
+gboolean      shopno_qs_tray_get_owns_xembed  (ShopnoQsTray *tray);
+
+/* For an XEmbed icon whose window went away */
+void          shopno_qs_tray_remove_item      (ShopnoQsTray     *tray,
+                                               ShopnoQsTrayItem *item);
+
 G_END_DECLS
 
 #endif /* !__SHOPNO_QS_TRAY_H__ */

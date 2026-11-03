@@ -89,6 +89,7 @@ shopno_qs_settings_set_property (GObject      *object,
                                  GParamSpec   *pspec)
 {
   ShopnoQsSettings *self = SHOPNO_QS_SETTINGS (object);
+  gchar           **old;
 
   switch (prop_id)
     {
@@ -117,8 +118,10 @@ shopno_qs_settings_set_property (GObject      *object,
       break;
 
     case PROP_HIDDEN_TILES:
-      g_strfreev (self->hidden_tiles);
+      /* The new list may be made of the old one's strings */
+      old = self->hidden_tiles;
       self->hidden_tiles = g_value_dup_boxed (value);
+      g_strfreev (old);
       if (self->hidden_tiles == NULL)
         self->hidden_tiles = g_new0 (gchar *, 1);
   self->tray_pinned = g_new0 (gchar *, 1);
@@ -126,8 +129,10 @@ shopno_qs_settings_set_property (GObject      *object,
       break;
 
     case PROP_TRAY_PINNED:
-      g_strfreev (self->tray_pinned);
+      /* The new list may be made of the old one's strings */
+      old = self->tray_pinned;
       self->tray_pinned = g_value_dup_boxed (value);
+      g_strfreev (old);
       if (self->tray_pinned == NULL)
         self->tray_pinned = g_new0 (gchar *, 1);
       g_object_notify_by_pspec (object, pspec);
