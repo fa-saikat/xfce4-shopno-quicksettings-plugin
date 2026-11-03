@@ -124,7 +124,6 @@ shopno_qs_settings_set_property (GObject      *object,
       g_strfreev (old);
       if (self->hidden_tiles == NULL)
         self->hidden_tiles = g_new0 (gchar *, 1);
-  self->tray_pinned = g_new0 (gchar *, 1);
       g_object_notify_by_pspec (object, pspec);
       break;
 
