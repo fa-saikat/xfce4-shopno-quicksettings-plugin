@@ -1,5 +1,5 @@
 Name:           xfce4-shopno-quicksettings-plugin
-Version:        0.1.0
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        Windows 11 style quick settings for the Xfce panel
 
@@ -67,6 +67,18 @@ icon theme.
 %{_datadir}/icons/hicolor/scalable/apps/shopno-quicksettings.svg
 
 %changelog
+* Tue Nov 03 2026 FA Saikat <fahimabrar.saikat@gmail.com> - 0.2.0-1
+- System tray: other apps' StatusNotifierItem icons next to the quick
+  settings button, with their menus; replaces Xfce's System Tray plugin
+- Overflow flyout behind ^ for icons not pinned to the panel; choose the
+  pinned ones in Properties
+- Volume notification with a level bar while scrolling over the button
+- Wheel scrolling on the panel button and tray icons with smooth-scrolling
+  mice
+- Focus assist renamed to Do not disturb, with a bell icon
+- Overflow flyout keeps its place, shrinks when an app quits, and stays
+  open while an icon's menu is shown
+
 * Sun Nov 01 2026 FA Saikat <fahimabrar.saikat@gmail.com> - 0.1.0-1
 - Initial release
 - Wi-Fi tile and network page: switch the radio, connect with a password,
