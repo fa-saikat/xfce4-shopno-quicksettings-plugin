@@ -62,7 +62,8 @@ icon is not shown by default, since the Wi-Fi tile does its job.
 
 **Sliders.**
 
-- **Brightness** of a laptop screen. Hidden on desktop PCs, as on Windows.
+- **Brightness** of a laptop screen, or on desktop PCs of the external
+  monitors over DDC/CI. Hidden when neither can be changed.
 - **Volume**, with mute on the speaker icon. Its page picks the output device.
 
 **Footer.** Battery level and time remaining, and a button for all settings.
@@ -81,7 +82,8 @@ missing is greyed out with a tooltip saying why.
 | Wi-Fi, network  | NetworkManager                                                     |
 | Bluetooth       | BlueZ                                                              |
 | Volume          | PipeWire (with pipewire-pulse) or PulseAudio                       |
-| Brightness      | systemd-logind (or elogind 243 or newer), and a backlight          |
+| Brightness      | Laptops: systemd-logind (or elogind 243 or newer). Desktops: a     |
+|                 | monitor with DDC/CI turned on in its menu                          |
 | Battery         | UPower                                                             |
 | Do not disturb  | xfce4-notifyd                                                      |
 | Night light     | An X11 session with XRandR                                         |
@@ -171,6 +173,16 @@ sudo meson install -C build
 The prefix must match the one Xfce is installed to (`/usr` on almost every
 distribution), otherwise the panel will not find the plugin.
 
+Monitor brightness needs access to the graphics card's I2C buses. The plugin
+installs a udev rule that gives it to the logged-in user, and loads the
+`i2c-dev` module at boot. Both take effect after a restart, or right away
+with:
+
+```sh
+sudo modprobe i2c-dev
+sudo udevadm trigger --subsystem-match=i2c-dev
+```
+
 ## Background blur
 
 Blur is drawn by the compositor, so it needs [picom](https://github.com/yshui/picom)
@@ -202,8 +214,8 @@ are in
   Blueman for that.
 - **No enterprise Wi-Fi in the flyout.** 802.1X networks open
   nm-connection-editor.
-- **Brightness is for built-in screens.** External monitors (DDC/CI) are not
-  supported.
+- **One brightness slider.** On desktops it sets all monitors to the same
+  level. On laptops it sets only the built-in screen, not external monitors.
 - **Night light and redshift** both set the gamma ramps; use one of them.
 - **No tile editing in the flyout.** Choose tiles in Properties instead.
 - **XEmbed icons are the app's own.** Older apps draw and handle their

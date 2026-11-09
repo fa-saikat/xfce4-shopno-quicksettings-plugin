@@ -44,8 +44,8 @@ for screen brightness and volume, the battery level, and network, volume and
 battery icons on the panel button. It also shows other apps' tray icons
 (StatusNotifierItem), with an overflow flyout for hidden ones, and replaces
 Xfce's System Tray plugin. It talks to NetworkManager, BlueZ,
-PulseAudio or PipeWire, UPower and logind directly, and follows the GTK and
-icon theme.
+PulseAudio or PipeWire, UPower and logind directly, sets the brightness of
+external monitors over DDC/CI, and follows the GTK and icon theme.
 
 %prep
 %autosetup
@@ -65,6 +65,8 @@ icon theme.
 %{_libdir}/xfce4/panel/plugins/libshopno-quicksettings.so
 %{_datadir}/xfce4/panel/plugins/shopno-quicksettings.desktop
 %{_datadir}/icons/hicolor/scalable/apps/shopno-quicksettings.svg
+%{_prefix}/lib/udev/rules.d/60-shopno-quicksettings-i2c.rules
+%{_prefix}/lib/modules-load.d/shopno-quicksettings-i2c.conf
 
 %changelog
 * Wed Nov 04 2026 FA Saikat <fahimabrar.saikat@gmail.com> - 0.3.0-1

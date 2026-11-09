@@ -13,15 +13,18 @@
  */
 
 /*
- * Brightness slider for laptop screens.
+ * Brightness slider.
  *
- * The level is read from /sys/class/backlight and written through
- * systemd-logind's Session.SetBrightness, which lets the user of the
- * active session change it without a root helper. The slider is hidden
- * when there is no backlight, as on Windows for desktop PCs.
+ * On laptops the level is read from /sys/class/backlight and written
+ * through systemd-logind's Session.SetBrightness, which lets the user of
+ * the active session change it without a root helper. sysfs does not
+ * notify changes, so while the flyout is open the level is read again
+ * twice a second to follow the brightness keys.
  *
- * sysfs does not notify changes, so while the flyout is open the level is
- * read again twice a second to follow the brightness keys.
+ * Without a backlight, the slider sets external monitors over DDC/CI
+ * (shopno-qs-ddc.c), and is hidden when none of them answers. Monitors
+ * have no brightness keys, so the level is read only when the flyout
+ * opens.
  */
 
 #include "config.h"
@@ -29,11 +32,15 @@
 #include <glib/gi18n-lib.h>
 #include <gio/gio.h>
 
+#include "shopno-qs-ddc.h"
 #include "shopno-qs-features.h"
 #include "shopno-qs-slider.h"
 
 #define BACKLIGHT_DIR "/sys/class/backlight"
 #define POLL_INTERVAL 500
+
+/* Monitors take a moment to answer after they are plugged in */
+#define RESCAN_DELAY  2000
 
 /* Never go fully dark: some panels turn off at 0 */
 #define MIN_FRACTION 0.01
@@ -51,6 +58,11 @@ typedef struct
   guint         poll_id;
   gboolean      writing;
   gint          pending;    /* -1 when nothing is waiting */
+
+  /* External monitors, when there is no backlight */
+  ShopnoQsDdc  *ddc;
+  GdkScreen    *screen;
+  guint         rescan_id;
 } Brightness;
 
 
@@ -139,11 +151,22 @@ brightness_read (Brightness *brightness)
 
 
 static void
+brightness_set_tooltip (Brightness *brightness,
+                        gdouble     level)
+{
+  gchar *tooltip = g_strdup_printf (_("Brightness %d%%"), (gint) (level * 100.0 + 0.5));
+
+  gtk_widget_set_tooltip_text (brightness->slider, tooltip);
+  g_free (tooltip);
+}
+
+
+
+static void
 brightness_update (Brightness *brightness)
 {
   ShopnoQsSlider *slider = SHOPNO_QS_SLIDER (brightness->slider);
   gint            level = brightness_read (brightness);
-  gchar          *tooltip;
 
   /* Do not move the knob under the user's hand or while a change is on
    * its way to logind */
@@ -152,10 +175,7 @@ brightness_update (Brightness *brightness)
     return;
 
   shopno_qs_slider_set_value (slider, (gdouble) level / brightness->max);
-
-  tooltip = g_strdup_printf (_("Brightness %d%%"), (gint) (100.0 * level / brightness->max + 0.5));
-  gtk_widget_set_tooltip_text (brightness->slider, tooltip);
-  g_free (tooltip);
+  brightness_set_tooltip (brightness, (gdouble) level / brightness->max);
 }
 
 
@@ -226,15 +246,19 @@ brightness_value_changed (ShopnoQsSlider *slider,
                           gdouble         value,
                           Brightness     *brightness)
 {
-  gchar *tooltip;
+  /* Monitors stay lit at 0, so they get the whole range */
+  if (brightness->ddc != NULL)
+    {
+      shopno_qs_ddc_set (brightness->ddc, value);
+    }
+  else
+    {
+      value = MAX (value, MIN_FRACTION);
+      brightness->pending = MAX (1, (gint) (value * brightness->max + 0.5));
+      brightness_write_next (brightness);
+    }
 
-  value = MAX (value, MIN_FRACTION);
-  brightness->pending = MAX (1, (gint) (value * brightness->max + 0.5));
-  brightness_write_next (brightness);
-
-  tooltip = g_strdup_printf (_("Brightness %d%%"), (gint) (value * 100.0 + 0.5));
-  gtk_widget_set_tooltip_text (brightness->slider, tooltip);
-  g_free (tooltip);
+  brightness_set_tooltip (brightness, value);
 }
 
 
@@ -255,6 +279,12 @@ brightness_poll (gpointer data)
 static void
 brightness_window_mapped (Brightness *brightness)
 {
+  if (brightness->ddc != NULL)
+    {
+      shopno_qs_ddc_refresh (brightness->ddc);
+      return;
+    }
+
   brightness_update (brightness);
   if (brightness->poll_id == 0)
     brightness->poll_id = g_timeout_add (POLL_INTERVAL, brightness_poll, brightness);
@@ -280,12 +310,87 @@ brightness_free (gpointer data)
   Brightness *brightness = data;
 
   brightness_window_unmapped (brightness);
+  if (brightness->ddc != NULL)
+    {
+      g_signal_handlers_disconnect_by_data (brightness->screen, brightness);
+      if (brightness->rescan_id != 0)
+        g_source_remove (brightness->rescan_id);
+      shopno_qs_ddc_free (brightness->ddc);
+    }
   g_cancellable_cancel (brightness->cancellable);
   g_object_unref (brightness->cancellable);
   g_clear_object (&brightness->bus);
   g_free (brightness->name);
   g_free (brightness->path);
   g_free (brightness);
+}
+
+
+
+/*
+ * External monitors over DDC/CI
+ */
+
+static void
+brightness_ddc_changed (guint    n_monitors,
+                        gdouble  level,
+                        gpointer data)
+{
+  Brightness     *brightness = data;
+  ShopnoQsSlider *slider = SHOPNO_QS_SLIDER (brightness->slider);
+
+  gtk_widget_set_visible (brightness->slider, n_monitors > 0);
+
+  if (n_monitors == 0 || level < 0 || shopno_qs_slider_is_dragging (slider))
+    return;
+
+  shopno_qs_slider_set_value (slider, level);
+  brightness_set_tooltip (brightness, level);
+}
+
+
+
+static gboolean
+brightness_ddc_rescan (gpointer data)
+{
+  Brightness *brightness = data;
+
+  brightness->rescan_id = 0;
+  shopno_qs_ddc_rescan (brightness->ddc);
+
+  return G_SOURCE_REMOVE;
+}
+
+
+
+static void
+brightness_monitors_changed (Brightness *brightness)
+{
+  if (brightness->rescan_id != 0)
+    g_source_remove (brightness->rescan_id);
+  brightness->rescan_id = g_timeout_add (RESCAN_DELAY, brightness_ddc_rescan, brightness);
+}
+
+
+
+static void
+brightness_attach_ddc (Brightness     *brightness,
+                       ShopnoQsWindow *window)
+{
+  brightness->slider = shopno_qs_slider_new ("display-brightness-symbolic", NULL, FALSE);
+  g_signal_connect (brightness->slider, "value-changed", G_CALLBACK (brightness_value_changed), brightness);
+  shopno_qs_window_add_slider (window, brightness->slider);
+
+  /* Hidden until a monitor answers */
+  gtk_widget_hide (brightness->slider);
+  gtk_widget_set_no_show_all (brightness->slider, TRUE);
+
+  brightness->ddc = shopno_qs_ddc_new (brightness_ddc_changed, brightness);
+
+  brightness->screen = gtk_widget_get_screen (GTK_WIDGET (window));
+  g_signal_connect_swapped (brightness->screen, "monitors-changed",
+                            G_CALLBACK (brightness_monitors_changed), brightness);
+  g_signal_connect_swapped (window, "map", G_CALLBACK (brightness_window_mapped), brightness);
 }
 
 
@@ -301,7 +406,10 @@ shopno_qs_brightness_attach (ShopnoQsWindow *window)
 
   /* No backlight: a desktop PC with external monitors */
   if (!brightness_find_device (brightness))
-    return;
+    {
+      brightness_attach_ddc (brightness, window);
+      return;
+    }
 
   brightness->bus = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, NULL);
 
