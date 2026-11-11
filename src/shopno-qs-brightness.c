@@ -39,8 +39,15 @@
 #define BACKLIGHT_DIR "/sys/class/backlight"
 #define POLL_INTERVAL 500
 
-/* Monitors take a moment to answer after they are plugged in */
+/* Monitors take a moment to answer after they are plugged in or wake up,
+ * and miss some requests while another program talks to them. When fewer
+ * answer than before, look again after 2, 4, 8, 16 and 32 s before
+ * believing it. */
 #define RESCAN_DELAY  2000
+#define RESCAN_TRIES  5
+
+/* Without a monitor, opening the flyout looks again at most this often */
+#define RESCAN_ON_OPEN_INTERVAL (60 * G_TIME_SPAN_SECOND)
 
 /* Never go fully dark: some panels turn off at 0 */
 #define MIN_FRACTION 0.01
@@ -63,6 +70,12 @@ typedef struct
   ShopnoQsDdc  *ddc;
   GdkScreen    *screen;
   guint         rescan_id;
+  guint         n_monitors;
+  guint         expected;   /* the most monitors seen; 1 before any scan */
+  guint         rescan_tries;
+  gboolean      scanned;    /* the first scan has finished */
+  gboolean      seen;       /* a monitor has answered since the start */
+  gint64        opened_scan_at;
 } Brightness;
 
 
@@ -276,12 +289,27 @@ brightness_poll (gpointer data)
 
 
 
+static void brightness_ddc_rescan_later (Brightness *brightness,
+                                         guint       delay);
+
 static void
 brightness_window_mapped (Brightness *brightness)
 {
+  gint64 now = g_get_monotonic_time ();
+
   if (brightness->ddc != NULL)
     {
-      shopno_qs_ddc_refresh (brightness->ddc);
+      /* All retries failed, but a monitor may answer by now */
+      if (brightness->scanned && brightness->n_monitors == 0 && brightness->rescan_id == 0
+          && now - brightness->opened_scan_at > RESCAN_ON_OPEN_INTERVAL)
+        {
+          brightness->opened_scan_at = now;
+          shopno_qs_ddc_rescan (brightness->ddc);
+        }
+      else
+        {
+          shopno_qs_ddc_refresh (brightness->ddc);
+        }
       return;
     }
 
@@ -339,7 +367,33 @@ brightness_ddc_changed (guint    n_monitors,
   Brightness     *brightness = data;
   ShopnoQsSlider *slider = SHOPNO_QS_SLIDER (brightness->slider);
 
-  gtk_widget_set_visible (brightness->slider, n_monitors > 0);
+  brightness->n_monitors = n_monitors;
+  brightness->scanned = TRUE;
+
+  if (n_monitors >= brightness->expected)
+    {
+      brightness->expected = n_monitors;
+      brightness->rescan_tries = 0;
+    }
+  else if (brightness->rescan_id == 0)
+    {
+      /* Fewer than before: probably a monitor that missed a request */
+      if (brightness->rescan_tries < RESCAN_TRIES)
+        {
+          g_debug ("DDC/CI: %u of %u monitors answered, looking again", n_monitors, brightness->expected);
+          brightness_ddc_rescan_later (brightness, RESCAN_DELAY << brightness->rescan_tries);
+          brightness->rescan_tries++;
+        }
+      else
+        {
+          brightness->expected = n_monitors;
+        }
+    }
+
+  /* Stay visible while looking again for monitors that answered before */
+  brightness->seen |= n_monitors > 0;
+  gtk_widget_set_visible (brightness->slider,
+                          n_monitors > 0 || (brightness->seen && brightness->expected > 0));
 
   if (n_monitors == 0 || level < 0 || shopno_qs_slider_is_dragging (slider))
     return;
@@ -364,11 +418,20 @@ brightness_ddc_rescan (gpointer data)
 
 
 static void
-brightness_monitors_changed (Brightness *brightness)
+brightness_ddc_rescan_later (Brightness *brightness,
+                             guint       delay)
 {
   if (brightness->rescan_id != 0)
     g_source_remove (brightness->rescan_id);
-  brightness->rescan_id = g_timeout_add (RESCAN_DELAY, brightness_ddc_rescan, brightness);
+  brightness->rescan_id = g_timeout_add (delay, brightness_ddc_rescan, brightness);
+}
+
+
+
+static void
+brightness_monitors_changed (Brightness *brightness)
+{
+  brightness_ddc_rescan_later (brightness, RESCAN_DELAY);
 }
 
 
@@ -385,6 +448,8 @@ brightness_attach_ddc (Brightness     *brightness,
   gtk_widget_hide (brightness->slider);
   gtk_widget_set_no_show_all (brightness->slider, TRUE);
 
+  /* At login the monitors may not answer yet: retry as for a lost one */
+  brightness->expected = 1;
   brightness->ddc = shopno_qs_ddc_new (brightness_ddc_changed, brightness);
 
   brightness->screen = gtk_widget_get_screen (GTK_WIDGET (window));

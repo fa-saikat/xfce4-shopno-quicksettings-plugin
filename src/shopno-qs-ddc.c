@@ -325,20 +325,32 @@ monitor_open (const gchar *name,
   gchar   *device = g_build_filename ("/dev", name, NULL);
   Monitor *monitor = g_new0 (Monitor, 1);
 
+  const gchar *failure = NULL;
+
   monitor->fd = open (device, O_RDWR | O_CLOEXEC);
   if (monitor->fd < 0 && (errno == EACCES || errno == EPERM))
     *denied = TRUE;
   g_free (device);
 
-  /* No EDID: nothing is plugged into this connector */
-  if (monitor->fd < 0
-      || !monitor_read_edid (monitor)
-      || ioctl (monitor->fd, I2C_SLAVE, DDC_ADDR) < 0
-      || !monitor_get_brightness (monitor))
+  /* No EDID: nothing is plugged into this connector, or the driver
+   * cannot reach it right now */
+  if (monitor->fd < 0)
+    failure = g_strerror (errno);
+  else if (!monitor_read_edid (monitor))
+    failure = "no EDID";
+  else if (ioctl (monitor->fd, I2C_SLAVE, DDC_ADDR) < 0)
+    failure = g_strerror (errno);
+  else if (!monitor_get_brightness (monitor))
+    failure = "no DDC/CI answer";
+
+  if (failure != NULL)
     {
+      g_debug ("DDC/CI: %s: %s", name, failure);
       monitor_free (monitor);
       return NULL;
     }
+
+  g_debug ("DDC/CI: %s: brightness %u of %u", name, monitor->level, monitor->max);
 
   return monitor;
 }
