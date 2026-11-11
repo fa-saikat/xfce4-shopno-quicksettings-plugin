@@ -1,5 +1,5 @@
 Name:           xfce4-shopno-quicksettings-plugin
-Version:        0.3.0
+Version:        0.4.0
 Release:        1%{?dist}
 Summary:        Windows 11 style quick settings for the Xfce panel
 
@@ -69,6 +69,12 @@ external monitors over DDC/CI, and follows the GTK and icon theme.
 %{_prefix}/lib/modules-load.d/shopno-quicksettings-i2c.conf
 
 %changelog
+* Thu Nov 12 2026 FA Saikat <fahimabrar.saikat@gmail.com> - 0.4.0-1
+- Brightness slider for external monitors on desktop PCs, over DDC/CI,
+  with no extra programs needed
+- udev rule and module list that give the logged-in user access to the
+  graphics card's I2C buses
+
 * Wed Nov 04 2026 FA Saikat <fahimabrar.saikat@gmail.com> - 0.3.0-1
 - Tray icons of older apps that use the XEmbed tray, such as ibus on
   Xfce, Wine and Java programs
