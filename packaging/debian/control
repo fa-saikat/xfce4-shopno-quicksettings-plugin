@@ -53,5 +53,5 @@ Description: Windows 11 style quick settings for the Xfce panel
  and battery icons on the panel button. It also shows other apps' tray
  icons (StatusNotifierItem), with an overflow flyout for hidden ones, and
  replaces Xfce's System Tray plugin. It talks to NetworkManager, BlueZ,
- PulseAudio or PipeWire, UPower and logind directly, and follows the GTK
- and icon theme.
+ PulseAudio or PipeWire, UPower and logind directly, sets the brightness
+ of external monitors over DDC/CI, and follows the GTK and icon theme.
