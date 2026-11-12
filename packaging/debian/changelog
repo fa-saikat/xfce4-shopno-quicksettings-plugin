@@ -1,3 +1,12 @@
+xfce4-shopno-quicksettings-plugin (0.4.0-1) unstable; urgency=medium
+
+  * Brightness slider for external monitors on desktop PCs, over DDC/CI,
+    with no extra programs needed.
+  * udev rule and module list that give the logged-in user access to the
+    graphics card's I2C buses.
+
+ -- FA Saikat <fahimabrar.saikat@gmail.com>  Thu, 12 Nov 2026 12:00:00 +0600
+
 xfce4-shopno-quicksettings-plugin (0.3.0-1) unstable; urgency=medium
 
   * Tray icons of older apps that use the XEmbed tray, such as ibus on
