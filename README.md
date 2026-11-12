@@ -63,8 +63,13 @@ icon is not shown by default, since the Wi-Fi tile does its job.
 **Sliders.**
 
 - **Brightness** of a laptop screen, or on desktop PCs of the external
-  monitors over DDC/CI. Hidden when neither can be changed.
+  monitors over DDC/CI, with no extra programs needed. Hidden when neither
+  can be changed. See [Monitor brightness](#monitor-brightness).
 - **Volume**, with mute on the speaker icon. Its page picks the output device.
+
+<p align="center">
+  <img src="docs/screenshots/brightness.gif" alt="Dragging the brightness slider in the flyout down and back up on a desktop PC, with a Brightness 100% tooltip" width="400">
+</p>
 
 **Footer.** Battery level and time remaining, and a button for all settings.
 
@@ -171,17 +176,48 @@ sudo meson install -C build
 ```
 
 The prefix must match the one Xfce is installed to (`/usr` on almost every
-distribution), otherwise the panel will not find the plugin.
+distribution), otherwise the panel will not find the plugin. After the first
+install, restart once for [monitor brightness](#monitor-brightness).
 
-Monitor brightness needs access to the graphics card's I2C buses. The plugin
-installs a udev rule that gives it to the logged-in user, and loads the
-`i2c-dev` module at boot. Both take effect after a restart, or right away
-with:
+## Monitor brightness
+
+On a desktop PC, the brightness slider sets external monitors over DDC/CI,
+the control channel in the video cable that most monitors support. The
+plugin talks to the monitors itself, so nothing else needs to be installed.
+With several monitors, the slider sets them all to the same level. On
+laptops it sets the built-in screen, as before.
+
+To get the slider:
+
+1. Turn on **DDC/CI** in the monitor's own on-screen menu. Many monitors
+   have it on already.
+2. Restart once after installing. The plugin installs a udev rule that lets
+   the logged-in user reach the graphics card's I2C buses, and loads the
+   `i2c-dev` module at boot. To apply both without restarting:
+
+   ```sh
+   sudo modprobe i2c-dev
+   sudo udevadm trigger --subsystem-match=i2c-dev
+   ```
+
+The slider shows the monitors' level when the flyout opens, and finds them
+again after they are plugged in, turned on or wake from sleep. Only the
+I2C buses of the graphics card are opened, never other devices on the
+motherboard.
+
+If the slider does not show, run the panel with debug messages to see what
+the plugin finds on each bus:
 
 ```sh
-sudo modprobe i2c-dev
-sudo udevadm trigger --subsystem-match=i2c-dev
+xfce4-panel -q
+G_MESSAGES_DEBUG=shopno-quicksettings xfce4-panel
 ```
+
+`no EDID` means nothing answers on that connector, and `no DDC/CI answer`
+means a monitor is there but DDC/CI is off or not supported.
+`Permission denied` means the udev rule has not been applied yet. With the
+NVIDIA driver, a DisplayPort monitor sometimes stops answering for a
+while; the slider then sets the other monitors.
 
 ## Background blur
 
