@@ -1,0 +1,78 @@
+name: Mirror to JaduPC
+
+# fa-saikat/xfce4-shopno-quicksettings-plugin is the development repo (issues,
+# PRs, CI). JaduPC/xfce4-shopno-quicksettings-plugin is the organisation's copy.
+# This pushes `main` and `v*` release tags there verbatim after every push
+# here. Publishing a draft release creates its tag, which counts as a push.
+#
+# Auth: MIRROR_DEPLOY_KEY is the private half of an ed25519 deploy key
+# that has write access on JaduPC/xfce4-shopno-quicksettings-plugin (and nothing
+# else). It is a secret of the `mirror` environment, which only main and v*
+# tags may deploy to, so a workflow pushed on any other ref can't read it.
+#
+# The mirror is one-way and force-pushed, so never commit to main on
+# JaduPC/xfce4-shopno-quicksettings-plugin directly.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  # Manual run: re-sync main and every v* tag.
+  workflow_dispatch:
+
+concurrency:
+  group: mirror-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    # This file is mirrored too; don't run it on the mirror itself.
+    if: github.repository == 'fa-saikat/xfce4-shopno-quicksettings-plugin'
+    environment: mirror
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push to JaduPC/xfce4-shopno-quicksettings-plugin
+        env:
+          MIRROR_DEPLOY_KEY: ${{ secrets.MIRROR_DEPLOY_KEY }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/mirror_key"
+          hosts="$RUNNER_TEMP/known_hosts"
+          install -m 600 /dev/null "$key"
+          printf '%s\n' "$MIRROR_DEPLOY_KEY" > "$key"
+          # GitHub's published host key, so the push can't go elsewhere.
+          echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$hosts"
+          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o UserKnownHostsFile=$hosts -o StrictHostKeyChecking=yes"
+
+          refspecs=()
+          if [ "$EVENT" = push ]; then
+            case "$REF" in
+              refs/heads/*) refspecs+=("refs/remotes/origin/${REF#refs/heads/}:$REF") ;;
+              refs/tags/*)
+                # actions/checkout rewrites the triggering tag as a
+                # lightweight tag; re-fetch the real tag object so the
+                # mirror gets it intact.
+                git fetch --quiet --force origin "+$REF:$REF"
+                refspecs+=("$REF:$REF") ;;
+              *) echo "unexpected ref: $REF" >&2; exit 1 ;;
+            esac
+          else
+            refspecs+=("refs/remotes/origin/main:refs/heads/main")
+            while read -r t; do
+              refspecs+=("refs/tags/$t:refs/tags/$t")
+            done < <(git tag -l 'v*')
+          fi
+
+          git push --force git@github.com:JaduPC/xfce4-shopno-quicksettings-plugin.git "${refspecs[@]}"
+          rm -f "$key"
